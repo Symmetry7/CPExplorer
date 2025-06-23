@@ -7,6 +7,7 @@ import Index from "./pages/Index";
 import Statistics from "./pages/Statistics";
 import NotFound from "./pages/NotFound";
 import { TrainingGymPage } from "./pages/TrainingGym";
+import { Analytics } from "@vercel/analytics/next";
 
 const queryClient = new QueryClient();
 
@@ -35,6 +36,7 @@ const App = () => (
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
+      <Analytics />
     </TooltipProvider>
   </QueryClientProvider>
 );
