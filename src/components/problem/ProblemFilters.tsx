@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Search, Filter, X, Check, Settings, ChevronDown } from "lucide-react";
+import { Search, Filter, X, Check, Settings, ChevronDown, Type, Hash } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProblemFiltersProps {
@@ -63,6 +63,7 @@ export function ProblemFilters({
   filteredCount,
 }: ProblemFiltersProps) {
   const [isTagsOpen, setIsTagsOpen] = useState(false);
+  const [manualRatingMode, setManualRatingMode] = useState(false);
   const isMobile = useIsMobile();
 
   const handleTagToggle = (tag: string) => {
@@ -70,6 +71,11 @@ export function ProblemFilters({
       ? selectedTags.filter((t) => t !== tag)
       : [...selectedTags, tag];
     onTagsChange(newTags);
+  };
+
+  const toggleRatingMode = () => {
+    console.log('Toggling rating mode from:', manualRatingMode, 'to:', !manualRatingMode);
+    setManualRatingMode(!manualRatingMode);
   };
 
   const clearFilters = () => {
@@ -87,6 +93,30 @@ export function ProblemFilters({
       codeforcesHandle: "",
     });
     onTagsChange([]);
+  };
+
+  const handleRatingChange = (field: 'minRating' | 'maxRating', value: string) => {
+    if (manualRatingMode) {
+      // Free text input - allow any number in the 800-4000 range
+      const numValue = parseInt(value);
+      if (value === '' || (numValue >= 800 && numValue <= 4000)) {
+        onFiltersChange({
+          [field]: value === '' ? undefined : numValue
+        });
+      }
+    } else {
+      // Step-based input - enforce steps and limits
+      const numValue = parseInt(value);
+      if (numValue < 800) {
+        onFiltersChange({ [field]: 800 });
+      } else if (numValue > 4000) {
+        onFiltersChange({ [field]: 4000 });
+      } else {
+        onFiltersChange({
+          [field]: value ? numValue : undefined,
+        });
+      }
+    }
   };
 
   const hasActiveFilters =
@@ -262,8 +292,30 @@ export function ProblemFilters({
               <div className="space-y-6 mt-6">
                 {/* Rating Range */}
                 <div className="space-y-3">
-                  <Label className="text-sm font-medium">Rating Range</Label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-sm font-medium">Rating Range</Label>
+                    <Button
+                      type="button"
+                      variant={manualRatingMode ? "default" : "outline"}
+                      size="sm"
+                      onClick={toggleRatingMode}
+                      className="h-8 px-2 text-xs"
+                    >
+                      {manualRatingMode ? (
+                        <>
+                          <Hash className="h-3 w-3 mr-1" />
+                          Step Mode
+                        </>
+                      ) : (
+                        <>
+                          <Type className="h-3 w-3 mr-1" />
+                          Manual
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div>
                       <Label
                         htmlFor="minRating"
@@ -274,23 +326,13 @@ export function ProblemFilters({
                       <Input
                         id="minRating"
                         type="number"
-                        step="100"
+                        step={manualRatingMode ? "1" : "100"}
                         min="800"
                         max="4000"
-                        placeholder="800"
+                        placeholder={manualRatingMode ? "800" : "800"}
                         value={filters.minRating || ""}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value < 800) {
-                            onFiltersChange({ minRating: 800 });
-                          } else if (value > 4000) {
-                            onFiltersChange({ minRating: 4000 });
-                          } else {
-                            onFiltersChange({
-                              minRating: e.target.value ? value : undefined,
-                            });
-                          }
-                        }}
+                        onChange={(e) => handleRatingChange('minRating', e.target.value)}
+                        className="w-full"
                       />
                     </div>
                     <div>
@@ -303,26 +345,38 @@ export function ProblemFilters({
                       <Input
                         id="maxRating"
                         type="number"
-                        step="100"
+                        step={manualRatingMode ? "1" : "100"}
                         min="800"
                         max="4000"
-                        placeholder="4000"
+                        placeholder={manualRatingMode ? "4000" : "4000"}
                         value={filters.maxRating || ""}
-                        onChange={(e) => {
-                          const value = parseInt(e.target.value);
-                          if (value < 800) {
-                            onFiltersChange({ maxRating: 800 });
-                          } else if (value > 4000) {
-                            onFiltersChange({ maxRating: 4000 });
-                          } else {
-                            onFiltersChange({
-                              maxRating: e.target.value ? value : undefined,
-                            });
-                          }
-                        }}
+                        onChange={(e) => handleRatingChange('maxRating', e.target.value)}
+                        className="w-full"
                       />
                     </div>
                   </div>
+                  
+                  {manualRatingMode && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        Manual Mode
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Enter any rating value (800-4000)
+                      </p>
+                    </div>
+                  )}
+                  
+                  {!manualRatingMode && (
+                    <div className="flex items-center gap-2">
+                      <Badge variant="secondary" className="text-xs">
+                        Step Mode
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">
+                        Increases by 100 (800, 900, 1000, etc.)
+                      </p>
+                    </div>
+                  )}
                 </div>
 
                 <Separator />

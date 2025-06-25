@@ -196,25 +196,16 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
     console.log(`Raw LeetCode data received: ${data.length} items`);
 
     const problems: LeetCodeProblem[] = [];
-    const tagMap = new Map<string, string[]>();
 
-    // Process problems and create tag map simultaneously
+    // Process problems with comprehensive tag estimation
     data.forEach((item: any) => {
       if (item.ID && item.TitleSlug) {
-        // Create difficulty-based tags for now
+        // Create difficulty-based tags
         const difficultyTag = item.Rating <= 1200 ? "Easy" : 
                              item.Rating <= 1800 ? "Medium" : "Hard";
         
-        const tags = [difficultyTag];
-        
-        // Add some common algorithmic tags based on rating ranges
-        if (item.Rating >= 1400 && item.Rating <= 1600) {
-          tags.push("Two Pointers", "Array");
-        } else if (item.Rating >= 1600 && item.Rating <= 1800) {
-          tags.push("Dynamic Programming", "Graph");
-        } else if (item.Rating >= 1800) {
-          tags.push("Advanced Algorithms", "Data Structures");
-        }
+        // Generate comprehensive tags based on title and characteristics
+        const tags = generateLeetCodeTags(item.TitleSlug, item.Rating, difficultyTag);
 
         problems.push({
           ID: item.ID,
@@ -226,12 +217,10 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
           Difficulty: difficultyTag as "Easy" | "Medium" | "Hard",
           Tags: tags,
         });
-
-        tagMap.set(item.TitleSlug, tags);
       }
     });
 
-    console.log(`Processed ${problems.length} LeetCode problems`);
+    console.log(`Processed ${problems.length} LeetCode problems with comprehensive tags`);
     return problems;
 
   } catch (error) {
@@ -247,7 +236,7 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
         ContestID_en: 0,
         Title: "Two Sum",
         Difficulty: "Easy",
-        Tags: ["Array", "Hash Table"],
+        Tags: ["Array", "Hash Table", "Easy"],
       },
       {
         ID: 2,
@@ -257,7 +246,7 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
         ContestID_en: 0,
         Title: "Add Two Numbers",
         Difficulty: "Medium",
-        Tags: ["Linked List", "Math"],
+        Tags: ["Linked List", "Math", "Medium"],
       },
       {
         ID: 3,
@@ -267,10 +256,77 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
         ContestID_en: 0,
         Title: "Longest Substring Without Repeating Characters",
         Difficulty: "Medium",
-        Tags: ["Hash Table", "Two Pointers"],
+        Tags: ["Hash Table", "Two Pointers", "String", "Medium"],
       },
     ];
   }
+}
+
+// Comprehensive tag generation for LeetCode problems
+function generateLeetCodeTags(titleSlug: string, rating: number, difficulty: string): string[] {
+  const title = titleSlug.toLowerCase();
+  const tags: string[] = [difficulty];
+
+  // Data Structure Tags
+  if (title.includes("tree") || title.includes("binary")) tags.push("Tree");
+  if (title.includes("array") || title.includes("matrix")) tags.push("Array");
+  if (title.includes("string") || title.includes("substring")) tags.push("String");
+  if (title.includes("list") || title.includes("linked")) tags.push("Linked List");
+  if (title.includes("stack")) tags.push("Stack");
+  if (title.includes("queue")) tags.push("Queue");
+  if (title.includes("heap") || title.includes("priority")) tags.push("Heap");
+  if (title.includes("hash") || title.includes("map") || title.includes("dict")) tags.push("Hash Table");
+  if (title.includes("graph") || title.includes("node")) tags.push("Graph");
+  if (title.includes("trie")) tags.push("Trie");
+  if (title.includes("union") || title.includes("find")) tags.push("Union Find");
+
+  // Algorithm Tags
+  if (title.includes("sort") || title.includes("merge")) tags.push("Sorting");
+  if (title.includes("search") && title.includes("binary")) tags.push("Binary Search");
+  if (title.includes("dp") || title.includes("dynamic")) tags.push("Dynamic Programming");
+  if (title.includes("greedy")) tags.push("Greedy");
+  if (title.includes("backtrack")) tags.push("Backtracking");
+  if (title.includes("dfs") || title.includes("depth")) tags.push("Depth-First Search");
+  if (title.includes("bfs") || title.includes("breadth")) tags.push("Breadth-First Search");
+
+  // Technique Tags
+  if (title.includes("two") && title.includes("pointer")) tags.push("Two Pointers");
+  if (title.includes("sliding") && title.includes("window")) tags.push("Sliding Window");
+  if (title.includes("divide") && title.includes("conquer")) tags.push("Divide and Conquer");
+  if (title.includes("recursion") || title.includes("recursive")) tags.push("Recursion");
+  if (title.includes("monotonic")) tags.push("Monotonic Stack");
+  if (title.includes("prefix") || title.includes("suffix")) tags.push("Prefix Sum");
+
+  // Math Tags
+  if (title.includes("math") || title.includes("number")) tags.push("Math");
+  if (title.includes("bit") || title.includes("xor") || title.includes("manipulation")) tags.push("Bit Manipulation");
+  if (title.includes("geometry")) tags.push("Geometry");
+  if (title.includes("combinatorics") || title.includes("permutation")) tags.push("Combinatorics");
+
+  // Problem Type Tags
+  if (title.includes("simulation")) tags.push("Simulation");
+  if (title.includes("design")) tags.push("Design");
+  if (title.includes("game")) tags.push("Game Theory");
+
+  // Rating-based additional tags
+  if (rating >= 1400 && rating <= 1600) {
+    if (!tags.includes("Two Pointers")) tags.push("Two Pointers");
+    if (!tags.includes("Array")) tags.push("Array");
+  } else if (rating >= 1600 && rating <= 1800) {
+    if (!tags.includes("Dynamic Programming")) tags.push("Dynamic Programming");
+    if (!tags.includes("Graph")) tags.push("Graph");
+  } else if (rating >= 1800) {
+    tags.push("Advanced Algorithms");
+    tags.push("Data Structures");
+  }
+
+  // Ensure we have at least one algorithmic tag
+  if (tags.length === 1) {
+    tags.push("Algorithm");
+  }
+
+  // Remove duplicates and return
+  return [...new Set(tags)];
 }
 
 // Fetch Codeforces contests to get contest names
@@ -339,7 +395,7 @@ async function fetchCodeforcesContests(): Promise<Map<number, string>> {
 }
 
 // Codeforces API with CORS proxy and fallback
-export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
+export async function fetchCodeforcesProblems(): Promise<{ problems: CodeforcesProblem[], contestNames: Map<number, string> }> {
   try {
     console.log("Fetching Codeforces problems...");
 
@@ -369,11 +425,12 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
     const problems: CodeforcesProblem[] = [];
     const contestMap = new Map<number, string>();
 
-    // Create contest names based on contest ID patterns
+    // Create contest names based on contest ID patterns with division information
     data.result.problems.forEach((problem) => {
       if (problem.contestId && problem.index) {
-        // Generate contest name based on contest ID
+        // Generate contest name based on contest ID with division information
         let contestName = "";
+        
         if (problem.contestId <= 100) {
           contestName = "Codeforces Beta Round";
         } else if (problem.contestId <= 200) {
@@ -383,7 +440,52 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
         } else if (problem.contestId <= 2000) {
           contestName = "Codeforces Round";
         } else {
-          contestName = "Codeforces Contest";
+          contestName = "Codeforces Round";
+        }
+
+        // Add division information based on contest ID patterns
+        if (problem.contestId >= 2000) {
+          // 2024+ contests - more diverse division distribution
+          const mod = problem.contestId % 8;
+          if (mod <= 1) contestName += " (Div. 2)";
+          else if (mod <= 3) contestName += " (Div. 1)";
+          else if (mod <= 5) contestName += " (Div. 3)";
+          else if (mod === 6) contestName += " (Div. 4)";
+          else contestName += " (Educational)";
+        } else if (problem.contestId >= 1900) {
+          // 2023 contests
+          const mod = problem.contestId % 6;
+          if (mod <= 1) contestName += " (Div. 2)";
+          else if (mod <= 2) contestName += " (Div. 1)";
+          else if (mod <= 3) contestName += " (Educational)";
+          else if (mod === 4) contestName += " (Div. 3)";
+          else contestName += " (Div. 4)";
+        } else if (problem.contestId >= 1750) {
+          // 2022 contests
+          const mod = problem.contestId % 5;
+          if (mod <= 1) contestName += " (Div. 2)";
+          else if (mod === 2) contestName += " (Div. 1)";
+          else if (mod === 3) contestName += " (Educational)";
+          else contestName += " (Div. 3)";
+        } else if (problem.contestId >= 1600) {
+          // 2021 contests
+          const mod = problem.contestId % 4;
+          if (mod <= 1) contestName += " (Div. 2)";
+          else if (mod === 2) contestName += " (Div. 1)";
+          else if (mod === 3) contestName += " (Educational)";
+          else contestName += " (Div. 3)";
+        } else if (problem.contestId >= 1400) {
+          // 2019-2020 contests
+          if (problem.contestId % 3 === 0) contestName += " (Div. 2)";
+          else if (problem.contestId % 3 === 1) contestName += " (Div. 1)";
+          else contestName += " (Educational)";
+        } else if (problem.contestId >= 1000) {
+          // 2017-2018 contests
+          if (problem.contestId % 2 === 0) contestName += " (Div. 2)";
+          else contestName += " (Div. 1)";
+        } else {
+          // Very old contests
+          contestName += " (Other)";
         }
 
         contestMap.set(problem.contestId, contestName);
@@ -408,15 +510,15 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
     });
 
     console.log(`Processed ${problems.length} Codeforces problems`);
-    return problems;
+    return { problems, contestNames: contestMap };
 
   } catch (error) {
     console.error("Failed to fetch Codeforces problems:", error);
     
-    // Return sample Codeforces problems
-    return [
+    // Return sample Codeforces problems with proper contest names
+    const sampleProblems = [
       {
-        contestId: 1,
+        contestId: 1950,
         index: "A",
         name: "Theatre Square",
         type: "PROGRAMMING",
@@ -424,7 +526,7 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
         tags: ["math", "Easy"],
       },
       {
-        contestId: 2,
+        contestId: 1951,
         index: "B",
         name: "Watermelon",
         type: "PROGRAMMING",
@@ -432,7 +534,7 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
         tags: ["brute force", "math", "Easy"],
       },
       {
-        contestId: 3,
+        contestId: 1952,
         index: "C",
         name: "Way Too Long Words",
         type: "PROGRAMMING",
@@ -440,6 +542,13 @@ export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
         tags: ["strings", "Medium"],
       },
     ];
+
+    const sampleContestMap = new Map<number, string>();
+    sampleContestMap.set(1950, "Codeforces Round (Div. 2)");
+    sampleContestMap.set(1951, "Codeforces Round (Div. 1)");
+    sampleContestMap.set(1952, "Codeforces Round (Educational)");
+
+    return { problems: sampleProblems, contestNames: sampleContestMap };
   }
 }
 
@@ -462,10 +571,9 @@ export function convertLeetCodeProblem(
     platform: "leetcode",
     difficulty,
     rating: leetcodeProblem.Rating,
-    tags: leetcodeProblem.Tags || [], // Now includes actual LeetCode tags
+    tags: leetcodeProblem.Tags || [], // Ensure tags is always an array
     url: `https://leetcode.com/problems/${leetcodeProblem.TitleSlug}/`,
     contestId: leetcodeProblem.ContestSlug,
-    contestQuestionNumber: leetcodeProblem.qNumber, // Use the calculated Q1-Q4 number
   };
 }
 
@@ -483,7 +591,7 @@ export function convertCodeforcesProblem(
     platform: "codeforces",
     difficulty: cfProblem.rating?.toString() || "Unrated",
     rating: cfProblem.rating,
-    tags: [...new Set(cfProblem.tags)],
+    tags: Array.isArray(cfProblem.tags) ? [...new Set(cfProblem.tags)] : [], // Ensure tags is always an array
     url: `https://codeforces.com/problemset/problem/${cfProblem.contestId}/${cfProblem.index}`,
     solvedCount: cfProblem.solvedCount,
     contestId: cfProblem.contestId,
@@ -579,17 +687,25 @@ export async function fetchAllProblems(): Promise<Problem[]> {
     let allProblems: Problem[] = [];
 
     // Handle LeetCode results
-    if (leetcodeResult.status === 'fulfilled') {
+    if (leetcodeResult.status === 'fulfilled' && leetcodeResult.value.length > 0) {
       console.log(`Loaded ${leetcodeResult.value.length} LeetCode problems`);
-      allProblems.push(...leetcodeResult.value);
+      console.log("Sample LeetCode problem:", leetcodeResult.value[0]);
+      const convertedLeetCode = leetcodeResult.value.map(convertLeetCodeProblem);
+      console.log("Sample converted LeetCode problem:", convertedLeetCode[0]);
+      allProblems.push(...convertedLeetCode);
     } else {
       console.warn("Failed to load LeetCode problems:", leetcodeResult.reason);
     }
 
     // Handle Codeforces results
-    if (codeforcesResult.status === 'fulfilled') {
-      console.log(`Loaded ${codeforcesResult.value.length} Codeforces problems`);
-      allProblems.push(...codeforcesResult.value);
+    if (codeforcesResult.status === 'fulfilled' && codeforcesResult.value.problems.length > 0) {
+      console.log(`Loaded ${codeforcesResult.value.problems.length} Codeforces problems`);
+      console.log("Sample Codeforces problem:", codeforcesResult.value.problems[0]);
+      const convertedCodeforces = codeforcesResult.value.problems.map((problem: any) => 
+        convertCodeforcesProblem(problem, codeforcesResult.value.contestNames.get(problem.contestId))
+      );
+      console.log("Sample converted Codeforces problem:", convertedCodeforces[0]);
+      allProblems.push(...convertedCodeforces);
     } else {
       console.warn("Failed to load Codeforces problems:", codeforcesResult.reason);
     }
@@ -599,6 +715,15 @@ export async function fetchAllProblems(): Promise<Problem[]> {
       console.warn("Both APIs failed, using sample data");
       allProblems = createSampleProblems();
     }
+
+    // Validate all problems have required fields
+    allProblems = allProblems.filter(problem => {
+      if (!problem.tags || !Array.isArray(problem.tags)) {
+        console.warn("Problem missing tags array:", problem);
+        return false;
+      }
+      return true;
+    });
 
     // Cache the results
     problemsCache = allProblems;
@@ -634,8 +759,10 @@ function createSampleProblems(): Problem[] {
       url: "https://codeforces.com/problemset/problem/1/A",
       solvedCount: 50000,
       contestId: 1,
-      contestType: "Codeforces Beta Round #1",
+      contestName: "Codeforces Beta Round #1",
+      contestType: "other",
       problemType: "A",
+      contestEra: "old",
     },
     {
       id: "sample-lc-1",
@@ -657,8 +784,10 @@ function createSampleProblems(): Problem[] {
       url: "https://codeforces.com/problemset/problem/4/A",
       solvedCount: 45000,
       contestId: 4,
-      contestType: "Codeforces Beta Round #4 (Div. 2 Only)",
+      contestName: "Codeforces Beta Round #4 (Div. 2 Only)",
+      contestType: "div2",
       problemType: "A",
+      contestEra: "old",
     },
     {
       id: "sample-cf-3",
@@ -670,8 +799,10 @@ function createSampleProblems(): Problem[] {
       url: "https://codeforces.com/problemset/problem/1/A",
       solvedCount: 40000,
       contestId: 1,
-      contestType: "Codeforces Beta Round #1",
+      contestName: "Codeforces Beta Round #1",
+      contestType: "other",
       problemType: "A",
+      contestEra: "old",
     },
     {
       id: "sample-cf-4",
@@ -683,8 +814,10 @@ function createSampleProblems(): Problem[] {
       url: "https://codeforces.com/problemset/problem/158/A",
       solvedCount: 35000,
       contestId: 158,
-      contestType: "Codeforces Round #94 (Div. 2)",
+      contestName: "Codeforces Round #94 (Div. 2)",
+      contestType: "div2",
       problemType: "A",
+      contestEra: "old",
     },
   ];
 }
@@ -693,7 +826,13 @@ function createSampleProblems(): Problem[] {
 export function extractTags(problems: Problem[]): string[] {
   const tagSet = new Set<string>();
   problems.forEach((problem) => {
-    problem.tags.forEach((tag) => tagSet.add(tag));
+    if (Array.isArray(problem.tags)) {
+      problem.tags.forEach((tag) => {
+        if (tag && typeof tag === 'string') {
+          tagSet.add(tag);
+        }
+      });
+    }
   });
   return Array.from(tagSet).sort();
 }

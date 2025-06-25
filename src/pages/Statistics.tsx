@@ -445,15 +445,58 @@ const Statistics = () => {
                 </div>
               </div>
             </div>
-            <Button
-              onClick={handleSearch}
-              disabled={loading || (!leetcodeHandle && !codeforcesHandle)}
-              className="w-full sm:w-auto"
-            >
-              {loading ? "Loading..." : "Search Performance"}
-            </Button>
+            <div className="flex justify-center">
+              <Button
+                onClick={handleSearch}
+                disabled={loading || (!leetcodeHandle && !codeforcesHandle)}
+                className="w-full sm:w-auto"
+              >
+                {loading ? "Loading..." : "Search Performance"}
+              </Button>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Simple summary card */}
+        {Object.keys(stats).length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Stats</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div>
+                  <div className="text-xs text-muted-foreground">Total Solved (LeetCode)</div>
+                  <div className="text-lg font-bold">{stats.leetcode ? stats.leetcode.stats.totalSolved : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Total Solved (Codeforces)</div>
+                  <div className="text-lg font-bold">{stats.codeforces ? stats.codeforces.problemsSolved.total : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Total Solved (Combined)</div>
+                  <div className="text-lg font-bold">{(stats.leetcode ? stats.leetcode.stats.totalSolved : 0) + (stats.codeforces ? stats.codeforces.problemsSolved.total : 0)}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Highest Codeforces Rating</div>
+                  <div className="text-lg font-bold">{stats.codeforces ? stats.codeforces.user.maxRating : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">LeetCode Acceptance Rate</div>
+                  <div className="text-lg font-bold">{stats.leetcode ? stats.leetcode.stats.acceptanceRate.toFixed(1) + '%' : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Last Contest (Codeforces)</div>
+                  <div className="text-lg font-bold">{stats.codeforces && stats.codeforces.contests && stats.codeforces.contests.length > 0 ? new Date(stats.codeforces.contests[0].startTimeSeconds * 1000).toLocaleDateString() : '-'}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-muted-foreground">Streak (LeetCode)</div>
+                  <div className="text-lg font-bold">{stats.leetcode && stats.leetcode.stats.streak ? stats.leetcode.stats.streak : '-'}</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {error && (
           <Alert variant="destructive">
