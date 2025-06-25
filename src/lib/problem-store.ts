@@ -80,6 +80,24 @@ class ProblemStore {
     this.notify();
   }
 
+  // Preload problems in the background for faster subsequent loads
+  preloadProblems() {
+    if (this.state.problems.length === 0 && !this.state.loading) {
+      console.log("Preloading problems in background...");
+      this.loadProblems();
+    }
+  }
+
+  // Get problems with minimal loading state
+  getProblems(): Problem[] {
+    return this.state.problems;
+  }
+
+  // Check if problems are available
+  hasProblems(): boolean {
+    return this.state.problems.length > 0;
+  }
+
   setFilters(filters: Partial<ProblemFilters>) {
     this.state.filters = { ...this.state.filters, ...filters };
     this.applyFilters();

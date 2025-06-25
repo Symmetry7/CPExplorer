@@ -30,8 +30,12 @@ const Index = () => {
 
   useEffect(() => {
     const unsubscribe = problemStore.subscribe(() => {
-      setState(problemStore.getState());
+      const newState = problemStore.getState();
+      setState(newState);
     });
+
+    // Preload problems immediately
+    problemStore.preloadProblems();
 
     return unsubscribe;
   }, []);

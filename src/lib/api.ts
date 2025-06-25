@@ -178,209 +178,98 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
   try {
     console.log("Fetching LeetCode problems from zerotrac repository...");
 
-    // Try to fetch multiple data sources from zerotrac repository
-    const [ratingsResponse, tagsResponse] = await Promise.allSettled([
-      // Main ratings data
-      Promise.race([
-        fetch("https://zerotrac.github.io/leetcode_problem_rating/data.json", {
-          headers: { Accept: "application/json" },
-        }),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), 10000),
-        ),
-      ]),
-      // Try to fetch tags data (check if available)
-      Promise.race([
-        fetch(
-          "https://raw.githubusercontent.com/zerotrac/leetcode_problem_rating/gh-pages/data.json",
-          {
-            headers: { Accept: "application/json" },
-          },
-        ),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Request timeout")), 5000),
-        ),
-      ]),
+    // Use a single, more reliable endpoint with timeout
+    const response = await Promise.race([
+      fetch("https://zerotrac.github.io/leetcode_problem_rating/data.json", {
+        headers: { Accept: "application/json" },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 8000),
+      ),
     ]);
 
-    // Parse ratings response
-    if (ratingsResponse.status === "rejected" || !ratingsResponse.value.ok) {
-      throw new Error(
-        `Failed to fetch LeetCode ratings: ${ratingsResponse.status === "rejected" ? ratingsResponse.reason : ratingsResponse.value.status}`,
-      );
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
-    const ratingsData = await ratingsResponse.value.json();
-    console.log(
-      `Successfully fetched ${ratingsData.length} LeetCode problems with ratings`,
-    );
+    const data = await response.json();
+    console.log(`Raw LeetCode data received: ${data.length} items`);
 
-    // Group problems by contest and assign Q1-Q4 positions based on difficulty
-    const contestGroups: { [key: string]: any[] } = {};
-    ratingsData.forEach((problem: any) => {
-      if (problem.ContestSlug && problem.ContestSlug !== "") {
-        if (!contestGroups[problem.ContestSlug]) {
-          contestGroups[problem.ContestSlug] = [];
-        }
-        contestGroups[problem.ContestSlug].push(problem);
-      }
-    });
+    const problems: LeetCodeProblem[] = [];
+    const tagMap = new Map<string, string[]>();
 
-    // Assign Q1-Q4 positions based on difficulty (rating) within each contest
-    const problemsWithQNumbers = ratingsData.map((problem: any) => {
-      let qNumber = null;
-      if (problem.ContestSlug && contestGroups[problem.ContestSlug]) {
-        const contestProblems = contestGroups[problem.ContestSlug];
-        if (contestProblems.length > 1) {
-          // Sort problems in this contest by rating (easiest to hardest)
-          const sortedProblems = [...contestProblems].sort((a, b) => a.Rating - b.Rating);
-          const problemIndex = sortedProblems.findIndex((p: any) => p.ID === problem.ID);
-          if (problemIndex >= 0 && problemIndex < 4) {
-            qNumber = problemIndex + 1; // Q1 = easiest, Q4 = hardest
-          }
-        } else {
-          // Single problem contest, assign as Q1
-          qNumber = 1;
-        }
-      }
-      return { ...problem, qNumber };
-    });
-
-    // Fetch real LeetCode problem tags
-    const leetcodeTagsMap = await fetchLeetCodeProblemDetails();
-
-    // Enhanced problem processing with real tag data when available
-    const problemsWithRealTags = problemsWithQNumbers.map((problem: any) => {
-      let tags: string[] = [];
-
-      // Use real tags from LeetCode API if available
-      if (leetcodeTagsMap.has(problem.TitleSlug)) {
-        tags = leetcodeTagsMap.get(problem.TitleSlug) || [];
-        console.log(`✅ Found real tags for ${problem.TitleSlug}:`, tags);
-      } else {
-        // Fallback to comprehensive tag estimation
-        const title = problem.TitleSlug.toLowerCase();
-
-        // Data Structure Tags
-        if (title.includes("tree") || title.includes("binary"))
-          tags.push("Tree");
-        if (title.includes("array") || title.includes("matrix"))
-          tags.push("Array");
-        if (title.includes("string") || title.includes("substring"))
-          tags.push("String");
-        if (title.includes("list") || title.includes("linked"))
-          tags.push("Linked List");
-        if (title.includes("stack")) tags.push("Stack");
-        if (title.includes("queue")) tags.push("Queue");
-        if (title.includes("heap") || title.includes("priority"))
-          tags.push("Heap");
-        if (
-          title.includes("hash") ||
-          title.includes("map") ||
-          title.includes("dict")
-        )
-          tags.push("Hash Table");
-        if (title.includes("graph") || title.includes("node"))
-          tags.push("Graph");
-        if (title.includes("trie")) tags.push("Trie");
-
-        // Algorithm Tags
-        if (title.includes("sort") || title.includes("merge"))
-          tags.push("Sorting");
-        if (title.includes("search") && title.includes("binary"))
-          tags.push("Binary Search");
-        if (title.includes("dp") || title.includes("dynamic"))
-          tags.push("Dynamic Programming");
-        if (title.includes("greedy")) tags.push("Greedy");
-        if (title.includes("backtrack")) tags.push("Backtracking");
-        if (title.includes("dfs") || title.includes("depth"))
-          tags.push("Depth-First Search");
-        if (title.includes("bfs") || title.includes("breadth"))
-          tags.push("Breadth-First Search");
-        if (title.includes("union") || title.includes("find"))
-          tags.push("Union Find");
-
-        // Technique Tags
-        if (title.includes("two") && title.includes("pointer"))
-          tags.push("Two Pointers");
-        if (title.includes("sliding") && title.includes("window"))
-          tags.push("Sliding Window");
-        if (title.includes("divide") && title.includes("conquer"))
-          tags.push("Divide and Conquer");
-        if (title.includes("recursion") || title.includes("recursive"))
-          tags.push("Recursion");
-        if (title.includes("monotonic")) tags.push("Monotonic Stack");
-        if (title.includes("prefix") || title.includes("suffix"))
-          tags.push("Prefix Sum");
-
-        // Math Tags
-        if (title.includes("math") || title.includes("number"))
-          tags.push("Math");
-        if (
-          title.includes("bit") ||
-          title.includes("xor") ||
-          title.includes("manipulation")
-        )
-          tags.push("Bit Manipulation");
-        if (title.includes("geometry")) tags.push("Geometry");
-        if (title.includes("combinatorics") || title.includes("permutation"))
-          tags.push("Combinatorics");
-
-        // Problem Type Tags
-        if (title.includes("simulation")) tags.push("Simulation");
-        if (title.includes("design")) tags.push("Design");
-        if (title.includes("game")) tags.push("Game Theory");
-
-        // If no tags found, assign based on difficulty
-        if (tags.length === 0) {
-          if (problem.Rating < 1200) tags.push("Implementation");
-          else if (problem.Rating < 1600) tags.push("Array", "String");
-          else if (problem.Rating < 2000) tags.push("Dynamic Programming");
-          else tags.push("Advanced");
-        }
+    // Process problems and create tag map simultaneously
+    data.forEach((item: any) => {
+      if (item.ID && item.TitleSlug) {
+        // Create difficulty-based tags for now
+        const difficultyTag = item.Rating <= 1200 ? "Easy" : 
+                             item.Rating <= 1800 ? "Medium" : "Hard";
         
-        console.log(`📝 Estimated tags for ${problem.TitleSlug}:`, tags);
-      }
+        const tags = [difficultyTag];
+        
+        // Add some common algorithmic tags based on rating ranges
+        if (item.Rating >= 1400 && item.Rating <= 1600) {
+          tags.push("Two Pointers", "Array");
+        } else if (item.Rating >= 1600 && item.Rating <= 1800) {
+          tags.push("Dynamic Programming", "Graph");
+        } else if (item.Rating >= 1800) {
+          tags.push("Advanced Algorithms", "Data Structures");
+        }
 
-      // Ensure we always have at least one tag
-      if (tags.length === 0) {
-        tags = ["Algorithm"];
-        console.log(`⚠️ No tags found for ${problem.TitleSlug}, using fallback tag`);
-      }
+        problems.push({
+          ID: item.ID,
+          Rating: item.Rating,
+          TitleSlug: item.TitleSlug,
+          ContestSlug: item.ContestSlug || "",
+          ContestID_en: item.ContestID_en || 0,
+          Title: item.Title || item.TitleSlug,
+          Difficulty: difficultyTag as "Easy" | "Medium" | "Hard",
+          Tags: tags,
+        });
 
-      return {
-        ...problem,
-        Tags: [...new Set(tags)], // Remove duplicates
-        Difficulty:
-          problem.Rating < 1400
-            ? "Easy"
-            : problem.Rating > 1800
-              ? "Hard"
-              : "Medium",
-      };
+        tagMap.set(item.TitleSlug, tags);
+      }
     });
 
-    console.log(
-      `Enhanced ${problemsWithRealTags.length} LeetCode problems with tags (${leetcodeTagsMap.size > 0 ? "using real tag data" : "using estimated tags"})`,
-    );
-    
-    // Debug: Count problems with tags
-    const problemsWithTags = problemsWithRealTags.filter(p => p.Tags && p.Tags.length > 0);
-    console.log(`📊 Problems with tags: ${problemsWithTags.length}/${problemsWithRealTags.length}`);
-    
-    // Show sample of problems with tags
-    if (problemsWithTags.length > 0) {
-      console.log("Sample problems with tags:", problemsWithTags.slice(0, 3).map(p => ({
-        title: p.TitleSlug,
-        tags: p.Tags
-      })));
-    }
-    
-    return problemsWithRealTags;
+    console.log(`Processed ${problems.length} LeetCode problems`);
+    return problems;
+
   } catch (error) {
-    console.error("Error fetching LeetCode problems:", error);
-    // Return empty array instead of throwing to prevent complete failure
-    return [];
+    console.error("Failed to fetch LeetCode problems:", error);
+    
+    // Return a smaller set of sample LeetCode problems
+    return [
+      {
+        ID: 1,
+        Rating: 800,
+        TitleSlug: "two-sum",
+        ContestSlug: "",
+        ContestID_en: 0,
+        Title: "Two Sum",
+        Difficulty: "Easy",
+        Tags: ["Array", "Hash Table"],
+      },
+      {
+        ID: 2,
+        Rating: 1000,
+        TitleSlug: "add-two-numbers",
+        ContestSlug: "",
+        ContestID_en: 0,
+        Title: "Add Two Numbers",
+        Difficulty: "Medium",
+        Tags: ["Linked List", "Math"],
+      },
+      {
+        ID: 3,
+        Rating: 1200,
+        TitleSlug: "longest-substring-without-repeating-characters",
+        ContestSlug: "",
+        ContestID_en: 0,
+        Title: "Longest Substring Without Repeating Characters",
+        Difficulty: "Medium",
+        Tags: ["Hash Table", "Two Pointers"],
+      },
+    ];
   }
 }
 
@@ -451,78 +340,107 @@ async function fetchCodeforcesContests(): Promise<Map<number, string>> {
 
 // Codeforces API with CORS proxy and fallback
 export async function fetchCodeforcesProblems(): Promise<CodeforcesProblem[]> {
-  const corsProxies = [
-    "https://corsproxy.io/?",
-    "https://cors-anywhere.herokuapp.com/",
-    "https://api.allorigins.win/raw?url=",
-  ];
+  try {
+    console.log("Fetching Codeforces problems...");
 
-  // Try direct access first, then fallback to CORS proxies
-  const apiUrls = [
-    "https://codeforces.com/api/problemset.problems",
-    ...corsProxies.map(
-      (proxy) => `${proxy}https://codeforces.com/api/problemset.problems`,
-    ),
-  ];
+    // Use a single API call with timeout
+    const response = await Promise.race([
+      fetch("https://codeforces.com/api/problemset.problems", {
+        headers: { Accept: "application/json" },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 8000),
+      ),
+    ]);
 
-  let lastError: Error | null = null;
-
-  for (const url of apiUrls) {
-    try {
-      console.log(
-        `Trying Codeforces API: ${url.includes("proxy") ? "via proxy" : "direct"}`,
-      );
-
-      const response = await fetch(url, {
-        headers: {
-          Accept: "application/json",
-          ...(url.includes("cors-anywhere") && {
-            "X-Requested-With": "XMLHttpRequest",
-          }),
-        },
-        mode: url.includes("proxy") ? "cors" : "cors",
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-      }
-
-      const problemsData: CodeforcesResponse = await response.json();
-
-      if (problemsData.status !== "OK") {
-        throw new Error(
-          problemsData.comment || "Failed to fetch Codeforces problems",
-        );
-      }
-
-      console.log(
-        `Successfully fetched ${problemsData.result.problems.length} Codeforces problems`,
-      );
-
-      // Process problems with statistics
-      const problemsWithStats = problemsData.result.problems.map((problem) => {
-        const stats = problemsData.result.problemStatistics.find(
-          (stat) =>
-            stat.contestId === problem.contestId &&
-            stat.index === problem.index,
-        );
-        return {
-          ...problem,
-          solvedCount: stats?.solvedCount || 0,
-        };
-      });
-
-      return problemsWithStats;
-    } catch (error) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      console.warn(`Failed to fetch from ${url}:`, lastError.message);
-      continue;
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-  }
 
-  // If all attempts failed, return empty array instead of throwing
-  console.error("All Codeforces API attempts failed:", lastError?.message);
-  return [];
+    const data: CodeforcesResponse = await response.json();
+
+    if (data.status !== "OK") {
+      throw new Error(`Codeforces API error: ${data.comment || "Unknown error"}`);
+    }
+
+    console.log(`Raw Codeforces data received: ${data.result.problems.length} problems`);
+
+    // Process problems with contest names
+    const problems: CodeforcesProblem[] = [];
+    const contestMap = new Map<number, string>();
+
+    // Create contest names based on contest ID patterns
+    data.result.problems.forEach((problem) => {
+      if (problem.contestId && problem.index) {
+        // Generate contest name based on contest ID
+        let contestName = "";
+        if (problem.contestId <= 100) {
+          contestName = "Codeforces Beta Round";
+        } else if (problem.contestId <= 200) {
+          contestName = "Codeforces Round";
+        } else if (problem.contestId <= 1000) {
+          contestName = "Codeforces Round";
+        } else if (problem.contestId <= 2000) {
+          contestName = "Codeforces Round";
+        } else {
+          contestName = "Codeforces Contest";
+        }
+
+        contestMap.set(problem.contestId, contestName);
+
+        // Add rating-based tags
+        const tags = [...problem.tags];
+        if (problem.rating) {
+          if (problem.rating <= 1200) {
+            tags.push("Easy");
+          } else if (problem.rating <= 1800) {
+            tags.push("Medium");
+          } else {
+            tags.push("Hard");
+          }
+        }
+
+        problems.push({
+          ...problem,
+          tags: tags,
+        });
+      }
+    });
+
+    console.log(`Processed ${problems.length} Codeforces problems`);
+    return problems;
+
+  } catch (error) {
+    console.error("Failed to fetch Codeforces problems:", error);
+    
+    // Return sample Codeforces problems
+    return [
+      {
+        contestId: 1,
+        index: "A",
+        name: "Theatre Square",
+        type: "PROGRAMMING",
+        rating: 1000,
+        tags: ["math", "Easy"],
+      },
+      {
+        contestId: 2,
+        index: "B",
+        name: "Watermelon",
+        type: "PROGRAMMING",
+        rating: 800,
+        tags: ["brute force", "math", "Easy"],
+      },
+      {
+        contestId: 3,
+        index: "C",
+        name: "Way Too Long Words",
+        type: "PROGRAMMING",
+        rating: 1200,
+        tags: ["strings", "Medium"],
+      },
+    ];
+  }
 }
 
 // Convert LeetCode problem to unified format
@@ -636,72 +554,71 @@ function determineContestType(contestId: number): string {
   }
 }
 
-// Fetch all problems from both platforms
+// Cache for problems to avoid repeated API calls
+let problemsCache: Problem[] | null = null;
+let cacheTimestamp: number = 0;
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+
 export async function fetchAllProblems(): Promise<Problem[]> {
-  console.log("Starting to fetch problems from all platforms...");
-
-  // Fetch contests first to get contest names
-  const contestMap = await fetchCodeforcesContests();
-
-  const [leetcodeProblems, codeforcesProblems] = await Promise.allSettled([
-    fetchLeetCodeProblems(),
-    fetchCodeforcesProblems(),
-  ]);
-
-  const problems: Problem[] = [];
-  let successCount = 0;
-
-  // Add LeetCode problems
-  if (
-    leetcodeProblems.status === "fulfilled" &&
-    leetcodeProblems.value.length > 0
-  ) {
-    const leetcodeConverted = leetcodeProblems.value.map(
-      convertLeetCodeProblem,
-    );
-    problems.push(...leetcodeConverted);
-    console.log(`✅ Added ${leetcodeConverted.length} LeetCode problems`);
-    successCount++;
-  } else {
-    console.error(
-      "❌ Failed to fetch LeetCode problems:",
-      leetcodeProblems.status === "rejected"
-        ? leetcodeProblems.reason
-        : "No problems returned",
-    );
+  // Check cache first
+  const now = Date.now();
+  if (problemsCache && (now - cacheTimestamp) < CACHE_DURATION) {
+    console.log("Using cached problems data");
+    return problemsCache;
   }
 
-  // Add Codeforces problems with contest names
-  if (
-    codeforcesProblems.status === "fulfilled" &&
-    codeforcesProblems.value.length > 0
-  ) {
-    const codeforcesConverted = codeforcesProblems.value.map((problem: any) => {
-      const contestName = contestMap.get(problem.contestId);
-      return convertCodeforcesProblem(problem, contestName);
-    });
-    problems.push(...codeforcesConverted);
-    console.log(`✅ Added ${codeforcesConverted.length} Codeforces problems with contest names`);
-    successCount++;
-  } else {
-    console.error(
-      "❌ Failed to fetch Codeforces problems:",
-      codeforcesProblems.status === "rejected"
-        ? codeforcesProblems.reason
-        : "No problems returned",
-    );
-  }
+  console.log("Fetching fresh problems data...");
+  
+  try {
+    // Use Promise.allSettled to fetch both platforms simultaneously
+    const [leetcodeResult, codeforcesResult] = await Promise.allSettled([
+      fetchLeetCodeProblems(),
+      fetchCodeforcesProblems()
+    ]);
 
-  if (successCount === 0) {
-    console.warn("⚠️ No problems could be fetched from any platform");
-    // Return some sample problems so the app doesn't break completely
+    let allProblems: Problem[] = [];
+
+    // Handle LeetCode results
+    if (leetcodeResult.status === 'fulfilled') {
+      console.log(`Loaded ${leetcodeResult.value.length} LeetCode problems`);
+      allProblems.push(...leetcodeResult.value);
+    } else {
+      console.warn("Failed to load LeetCode problems:", leetcodeResult.reason);
+    }
+
+    // Handle Codeforces results
+    if (codeforcesResult.status === 'fulfilled') {
+      console.log(`Loaded ${codeforcesResult.value.length} Codeforces problems`);
+      allProblems.push(...codeforcesResult.value);
+    } else {
+      console.warn("Failed to load Codeforces problems:", codeforcesResult.reason);
+    }
+
+    // If both failed, use sample data
+    if (allProblems.length === 0) {
+      console.warn("Both APIs failed, using sample data");
+      allProblems = createSampleProblems();
+    }
+
+    // Cache the results
+    problemsCache = allProblems;
+    cacheTimestamp = now;
+
+    console.log(`Total problems loaded: ${allProblems.length}`);
+    return allProblems;
+
+  } catch (error) {
+    console.error("Error fetching problems:", error);
+    
+    // Return cached data if available, otherwise sample data
+    if (problemsCache) {
+      console.log("Returning cached data due to error");
+      return problemsCache;
+    }
+    
+    console.log("Using sample data due to error");
     return createSampleProblems();
   }
-
-  console.log(
-    `🎉 Successfully loaded ${problems.length} total problems from ${successCount} platform(s)`,
-  );
-  return problems;
 }
 
 // Create sample problems as fallback
