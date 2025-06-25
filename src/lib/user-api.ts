@@ -430,32 +430,36 @@ export async function checkLeetCodeSubmission(
   timeWindow: number = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
 ): Promise<boolean> {
   try {
-    // For demo purposes, we'll simulate the API call
-    // In a real implementation, you would call the LeetCode GraphQL API
     console.log(`Checking LeetCode submission for ${problemTitleSlug} by ${username}`);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulate checking recent submissions
-    // In reality, you would fetch from: https://leetcode.com/graphql
-    const mockSubmissions: LeetCodeSubmission[] = [
-      {
-        id: 1,
-        title: "Two Sum",
-        titleSlug: "two-sum",
-        status: "ac",
-        timestamp: Date.now() - 1000 * 60 * 30 // 30 minutes ago
-      }
-    ];
-    
-    const recentSubmission = mockSubmissions.find(
-      sub => sub.titleSlug === problemTitleSlug && 
-             sub.status === "ac" && 
-             Date.now() - sub.timestamp < timeWindow
+    // Fetch real submissions from LeetCode API
+    const response = await fetch(
+      `https://leetcode-api-faisalshohag.vercel.app/${username}/submissions`
     );
-    
-    return !!recentSubmission;
+
+    if (!response.ok) {
+      console.error("Failed to fetch LeetCode submissions");
+      return false;
+    }
+
+    const data = await response.json();
+    const submissions = data.submissions || [];
+    const currentTime = Date.now();
+
+    // Find a recent successful submission for this specific problem
+    const recentSubmission = submissions.find(
+      (sub: any) => sub.titleSlug === problemTitleSlug && 
+                   sub.status === "ac" && 
+                   currentTime - sub.timestamp < timeWindow
+    );
+
+    if (recentSubmission) {
+      console.log(`Found recent LeetCode submission: ${recentSubmission.id} at ${new Date(recentSubmission.timestamp).toLocaleString()}`);
+      return true;
+    } else {
+      console.log(`No recent LeetCode submission found for ${problemTitleSlug}`);
+      return false;
+    }
   } catch (error) {
     console.error("Error checking LeetCode submission:", error);
     return false;
@@ -470,36 +474,43 @@ export async function checkCodeforcesSubmission(
   timeWindow: number = 24 * 60 * 60 // 24 hours in seconds
 ): Promise<boolean> {
   try {
-    // For demo purposes, we'll simulate the API call
-    // In a real implementation, you would call the Codeforces API
     console.log(`Checking Codeforces submission for ${contestId}${problemIndex} by ${username}`);
     
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Simulate checking recent submissions
-    // In reality, you would fetch from: https://codeforces.com/api/user.status?handle={username}
-    const mockSubmissions: CodeforcesSubmission[] = [
-      {
-        id: 1,
-        problem: {
-          contestId: 1,
-          index: "A",
-          name: "Test Problem"
-        },
-        verdict: "OK",
-        creationTimeSeconds: Math.floor(Date.now() / 1000) - 60 * 30 // 30 minutes ago
-      }
-    ];
-    
-    const recentSubmission = mockSubmissions.find(
+    // Fetch real submissions from Codeforces API
+    const response = await fetch(
+      `https://codeforces.com/api/user.status?handle=${username}&from=1&count=1000`
+    );
+
+    if (!response.ok) {
+      console.error("Failed to fetch Codeforces submissions");
+      return false;
+    }
+
+    const data = await response.json();
+
+    if (data.status !== "OK") {
+      console.error("Codeforces API error:", data.comment);
+      return false;
+    }
+
+    const submissions: CodeforcesSubmission[] = data.result || [];
+    const currentTime = Math.floor(Date.now() / 1000);
+
+    // Find a recent successful submission for this specific problem
+    const recentSubmission = submissions.find(
       sub => sub.problem.contestId === contestId && 
              sub.problem.index === problemIndex && 
              sub.verdict === "OK" && 
-             Math.floor(Date.now() / 1000) - sub.creationTimeSeconds < timeWindow
+             currentTime - sub.creationTimeSeconds < timeWindow
     );
-    
-    return !!recentSubmission;
+
+    if (recentSubmission) {
+      console.log(`Found recent submission: ${recentSubmission.id} at ${new Date(recentSubmission.creationTimeSeconds * 1000).toLocaleString()}`);
+      return true;
+    } else {
+      console.log(`No recent submission found for ${contestId}${problemIndex}`);
+      return false;
+    }
   } catch (error) {
     console.error("Error checking Codeforces submission:", error);
     return false;
@@ -515,7 +526,25 @@ export function getProblemIdentifier(problem: any): { contestId?: number; proble
   } else if (problem.platform === "codeforces") {
     // Extract contestId and problemIndex from Codeforces problem
     const contestId = parseInt(problem.contestId as string);
-    const problemIndex = problem.id.split('-').pop(); // Extract the problem index
+    
+    // Try multiple methods to extract problem index
+    let problemIndex = problem.problemType; // First try problemType field
+    
+    if (!problemIndex && problem.id) {
+      // Extract from problem ID (e.g., "1-A" -> "A")
+      const idParts = problem.id.split('-');
+      problemIndex = idParts[idParts.length - 1];
+    }
+    
+    if (!problemIndex && problem.url) {
+      // Extract from URL (e.g., "https://codeforces.com/problemset/problem/1/A" -> "A")
+      const urlMatch = problem.url.match(/problem\/(\d+)\/([A-Z])/);
+      if (urlMatch) {
+        problemIndex = urlMatch[2];
+      }
+    }
+    
+    console.log(`Problem identifier: contestId=${contestId}, problemIndex=${problemIndex}, problemId=${problem.id}`);
     return { contestId, problemIndex };
   }
   return {};

@@ -208,10 +208,21 @@ export function TrainingGymPage() {
       let isSolved = false;
       const identifier = getProblemIdentifier(problem);
 
+      console.log(`Checking submission for problem:`, {
+        platform: problem.platform,
+        title: problem.title,
+        identifier: identifier,
+        handle: currentHandle
+      });
+
       if (problem.platform === "leetcode" && identifier.titleSlug) {
         isSolved = await checkLeetCodeSubmission(identifier.titleSlug, currentHandle);
       } else if (problem.platform === "codeforces" && identifier.contestId && identifier.problemIndex) {
         isSolved = await checkCodeforcesSubmission(identifier.contestId, identifier.problemIndex, currentHandle);
+      } else {
+        console.error("Could not extract problem identifier:", identifier);
+        toast.error(`Unable to identify problem details for ${problem.title}. Please try again.`);
+        return;
       }
 
       if (isSolved) {
@@ -224,10 +235,12 @@ export function TrainingGymPage() {
           toast.success("🏆 Congratulations! You've solved all problems in this set!");
         }
       } else {
-        toast.error("No recent successful submission found for this problem. Make sure you've solved it recently!");
+        const timeWindow = problem.platform === "leetcode" ? "24 hours" : "24 hours";
+        toast.error(`No recent successful submission found for this problem within the last ${timeWindow}. Make sure you've solved it recently and your handle is correct!`);
       }
     } catch (error) {
-      toast.error("Error checking submission. Please try again.");
+      console.error("Error checking submission:", error);
+      toast.error("Error checking submission. Please check your internet connection and try again.");
     } finally {
       setIsCheckingSubmission(null);
     }
