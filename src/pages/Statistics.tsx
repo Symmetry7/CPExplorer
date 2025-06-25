@@ -378,395 +378,190 @@ const Statistics = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Hero Section */}
         <section className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-blue-500/10 to-purple-500/10 rounded-2xl" />
-          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-8 md:p-12">
+          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-code-500/10 to-primary/10 rounded-2xl" />
+          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-6 sm:p-8 md:p-12">
             <div className="max-w-4xl">
               <div className="flex items-center gap-2 mb-4">
                 <Badge
                   variant="outline"
                   className="bg-primary/10 text-primary border-primary/20"
                 >
-                  <Sparkles className="h-3 w-3 mr-1" />
-                  Advanced Analytics
+                  <BarChart3 className="h-3 w-3 mr-1" />
+                  <span className="hidden sm:inline">Performance Analytics</span>
+                  <span className="sm:hidden">Analytics</span>
                 </Badge>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
-                Your Coding{" "}
-                <span className="gradient-text">Performance Dashboard</span>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
+                Track Your{" "}
+                <span className="gradient-text">Competitive Programming</span>{" "}
+                Progress
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 max-w-3xl">
-                Dive deep into your competitive programming journey with advanced analytics, 
-                radar charts, and performance insights across LeetCode and Codeforces.
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-3xl">
+                Analyze your performance across LeetCode and Codeforces with detailed
+                statistics, charts, and insights. Monitor your progress and identify
+                areas for improvement.
               </p>
             </div>
           </div>
         </section>
 
-        {/* Handle Input Section */}
-        <section>
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-orange-50 via-white to-blue-50 dark:from-blue-950 dark:via-gray-900 dark:to-orange-950 rounded-2xl p-6">
-            <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-3 text-2xl font-bold">
-                <User className="h-6 w-6 text-primary" />
-                Enter Your Handles
-              </CardTitle>
-              <p className="text-muted-foreground text-sm mt-1">Get personalized analytics for your favorite platforms</p>
-            </CardHeader>
-            <CardContent className="space-y-6 pt-2">
-              <div className="flex flex-col md:flex-row gap-6">
-                {/* LeetCode Handle */}
-                <div className="flex-1 flex flex-col gap-2">
-                  <Label htmlFor="leetcode" className="flex items-center gap-2 text-orange-500 font-semibold">
-                    <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="24" fill="#FFA116"/><path d="M24.001 8.00098C16.268 8.00098 10.001 14.268 10.001 22.001C10.001 29.734 16.268 36.001 24.001 36.001C31.734 36.001 38.001 29.734 38.001 22.001C38.001 14.268 31.734 8.00098 24.001 8.00098ZM24.001 33.001C18.478 33.001 14.001 28.524 14.001 23.001C14.001 17.478 18.478 13.001 24.001 13.001C29.524 13.001 34.001 17.478 34.001 23.001C34.001 28.524 29.524 33.001 24.001 33.001Z" fill="white"/></svg>
-                    LeetCode Username
-                  </Label>
+        {/* Search Form */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search User Performance
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="leetcode-handle">LeetCode Handle</Label>
+                <div className="flex items-center gap-2">
+                  <SiLeetcode className="h-5 w-5 text-orange-500" />
                   <Input
-                    id="leetcode"
+                    id="leetcode-handle"
                     placeholder="Enter LeetCode username"
                     value={leetcodeHandle}
                     onChange={(e) => setLeetcodeHandle(e.target.value)}
-                    disabled={loading}
-                    className="rounded-xl border-2 border-orange-200 focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all bg-white/80 dark:bg-gray-900/60 shadow-sm px-4 py-2 text-base"
-                  />
-                </div>
-                {/* Codeforces Handle */}
-                <div className="flex-1 flex flex-col gap-2">
-                  <Label htmlFor="codeforces" className="flex items-center gap-2 text-blue-600 font-semibold">
-                    <svg width="20" height="20" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="48" height="48" rx="24" fill="#1F8ACB"/><path d="M24 8C16.268 8 10 14.268 10 22C10 29.732 16.268 36 24 36C31.732 36 38 29.732 38 22C38 14.268 31.732 8 24 8ZM24 33C18.477 33 14 28.523 14 23C14 17.477 18.477 13 24 13C29.523 13 34 17.477 34 23C34 28.523 29.523 33 24 33Z" fill="white"/></svg>
-                    Codeforces Handle
-                  </Label>
-                  <Input
-                    id="codeforces"
-                    placeholder="Enter Codeforces handle"
-                    value={codeforcesHandle}
-                    onChange={(e) => setCodeforcesHandle(e.target.value)}
-                    disabled={loading}
-                    className="rounded-xl border-2 border-blue-200 focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all bg-white/80 dark:bg-gray-900/60 shadow-sm px-4 py-2 text-base"
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                   />
                 </div>
               </div>
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              <Button
-                onClick={handleSearch}
-                disabled={loading || (!leetcodeHandle && !codeforcesHandle)}
-                className="w-full gap-2 bg-gradient-to-r from-orange-400 to-blue-500 hover:from-orange-500 hover:to-blue-600 text-lg font-semibold rounded-xl shadow-md py-3 mt-2 transition-all"
-              >
-                <Search className="h-5 w-5" />
-                {loading ? "Analyzing..." : "Generate Analytics"}
-              </Button>
-            </CardContent>
-          </Card>
-        </section>
+              <div className="space-y-2">
+                <Label htmlFor="codeforces-handle">Codeforces Handle</Label>
+                <div className="flex items-center gap-2">
+                  <SiCodeforces className="h-5 w-5 text-blue-500" />
+                  <Input
+                    id="codeforces-handle"
+                    placeholder="Enter Codeforces handle"
+                    value={codeforcesHandle}
+                    onChange={(e) => setCodeforcesHandle(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                  />
+                </div>
+              </div>
+            </div>
+            <Button
+              onClick={handleSearch}
+              disabled={loading || (!leetcodeHandle && !codeforcesHandle)}
+              className="w-full sm:w-auto"
+            >
+              {loading ? "Loading..." : "Search Performance"}
+            </Button>
+          </CardContent>
+        </Card>
 
-        {/* Results Section */}
-        {(loading || stats.leetcode || stats.codeforces) && (
-          <section className="space-y-6">
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+
+        {/* Results */}
+        {Object.keys(stats).length > 0 && (
+          <div className="space-y-6 sm:space-y-8">
+            {/* Radar Chart */}
+            {radarData && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Target className="h-5 w-5" />
+                    Performance Overview
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-64 sm:h-80 md:h-96">
+                    <Radar
+                      data={radarData}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                          legend: {
+                            position: 'top' as const,
+                          },
+                          title: {
+                            display: false,
+                          },
+                        },
+                        scales: {
+                          r: {
+                            beginAtZero: true,
+                          },
+                        },
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Platform-specific stats */}
             <Tabs defaultValue="overview" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 mb-4">
-                <TabsTrigger value="overview">
-                  <LayoutGrid className="h-4 w-4 mr-2" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="leetcode">
-                  <SiLeetcode className="h-4 w-4 mr-2" />
-                  LeetCode
-                </TabsTrigger>
-                <TabsTrigger value="codeforces">
-                  <SiCodeforces className="h-4 w-4 mr-2" />
-                  Codeforces
-                </TabsTrigger>
-                <TabsTrigger value="gym">
-                  <Dices className="h-4 w-4 mr-2" />
-                  Training Gym
-                </TabsTrigger>
+              <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3">
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                {stats.leetcode && <TabsTrigger value="leetcode">LeetCode</TabsTrigger>}
+                {stats.codeforces && <TabsTrigger value="codeforces">Codeforces</TabsTrigger>}
               </TabsList>
 
-              {/* Overview Tab */}
-              <TabsContent value="overview" className="space-y-6">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* LeetCode Overview */}
-                  {loading ? (
+              <TabsContent value="overview" className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stats.leetcode && (
                     <Card>
-                      <CardHeader>
-                        <Skeleton className="h-6 w-32" />
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    stats.leetcode && (
-                      <Card className="border-l-4 border-l-orange-500">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <div className="w-5 h-5 bg-orange-500 rounded" />
-                            LeetCode Performance
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="text-center">
-                            <div className="text-3xl font-bold">
-                              {stats.leetcode.stats.totalSolved}
-                            </div>
-                            <div className="text-sm text-muted-foreground">
-                              Problems Solved
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-3 gap-4 text-center">
-                            <div>
-                              <div className="font-semibold text-green-600">
-                                {stats.leetcode.stats.easySolved}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Easy
-                              </div>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-yellow-600">
-                                {stats.leetcode.stats.mediumSolved}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Medium
-                              </div>
-                            </div>
-                            <div>
-                              <div className="font-semibold text-red-600">
-                                {stats.leetcode.stats.hardSolved}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                Hard
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Acceptance Rate</span>
-                            <span className="font-semibold">
-                              {stats.leetcode.stats.acceptanceRate.toFixed(1)}%
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  )}
-
-                  {/* Codeforces Overview */}
-                  {loading ? (
-                    <Card>
-                      <CardHeader>
-                        <Skeleton className="h-6 w-32" />
-                      </CardHeader>
-                      <CardContent className="space-y-4">
-                        <Skeleton className="h-20 w-full" />
-                        <Skeleton className="h-8 w-full" />
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    stats.codeforces && (
-                      <Card className="border-l-4 border-l-blue-500">
-                        <CardHeader>
-                          <CardTitle className="flex items-center gap-2">
-                            <div className="w-5 h-5 bg-blue-500 rounded" />
-                            Codeforces Performance
-                          </CardTitle>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                          <div className="text-center">
-                            <div className="text-3xl font-bold">
-                              {stats.codeforces.user.rating}
-                            </div>
-                            <div
-                              className={cn(
-                                "text-sm font-medium",
-                                getRankColor(stats.codeforces.user.rank),
-                              )}
-                            >
-                              {stats.codeforces.user.rank}
-                            </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-4 text-center text-sm">
-                            <div>
-                              <div className="font-semibold">
-                                {stats.codeforces.problemsSolved.total}
-                              </div>
-                              <div className="text-muted-foreground">
-                                Problems
-                              </div>
-                            </div>
-                            <div>
-                              <div className="font-semibold">
-                                {stats.codeforces.user.maxRating}
-                              </div>
-                              <div className="text-muted-foreground">
-                                Max Rating
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span>Contribution</span>
-                            <span className="font-semibold">
-                              {stats.codeforces.user.contribution}
-                            </span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    )
-                  )}
-                </div>
-
-                {/* Quick Stats Grid */}
-                {(stats.leetcode || stats.codeforces) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    {stats.leetcode && (
-                      <>
-                        <Card className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950 dark:to-green-900">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2">
-                              <Target className="h-4 w-4 text-green-600" />
-                              <span className="text-sm font-medium">LeetCode Ranking</span>
-                            </div>
-                            <div className="text-2xl font-bold mt-2">
-                              #{stats.leetcode.stats.ranking.toLocaleString()}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-blue-600" />
-                              <span className="text-sm font-medium">Reputation</span>
-                            </div>
-                            <div className="text-2xl font-bold mt-2">
-                              {stats.leetcode.stats.reputation}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </>
-                    )}
-                    {stats.codeforces && (
-                      <>
-                        <Card className="bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950 dark:to-purple-900">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2">
-                              <Crown className="h-4 w-4 text-purple-600" />
-                              <span className="text-sm font-medium">Max Rating</span>
-                            </div>
-                            <div className="text-2xl font-bold mt-2">
-                              {stats.codeforces.user.maxRating}
-                            </div>
-                          </CardContent>
-                        </Card>
-                        <Card className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-950 dark:to-orange-900">
-                          <CardContent className="p-4">
-                            <div className="flex items-center gap-2">
-                              <Flame className="h-4 w-4 text-orange-600" />
-                              <span className="text-sm font-medium">Contribution</span>
-                            </div>
-                            <div className="text-2xl font-bold mt-2">
-                              {stats.codeforces.user.contribution}
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </>
-                    )}
-                  </div>
-                )}
-              </TabsContent>
-
-              {/* Radar Analysis Tab */}
-              <TabsContent value="radar" className="space-y-6">
-                {radarData && (
-                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <TargetIcon className="h-5 w-5" />
-                          Performance Radar Chart
-                        </CardTitle>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">LeetCode Rank</CardTitle>
+                        <SiLeetcode className="h-4 w-4 text-orange-500" />
                       </CardHeader>
                       <CardContent>
-                        <div className="h-80">
-                          <Radar
-                            data={radarData}
-                            options={{
-                              responsive: true,
-                              maintainAspectRatio: false,
-                              scales: {
-                                r: {
-                                  beginAtZero: true,
-                                  grid: {
-                                    color: 'rgba(0, 0, 0, 0.1)',
-                                  },
-                                  ticks: {
-                                    color: 'rgba(0, 0, 0, 0.7)',
-                                  },
-                                },
-                              },
-                              plugins: {
-                                legend: {
-                                  position: 'top' as const,
-                                },
-                                title: {
-                                  display: true,
-                                  text: 'Multi-Platform Performance Analysis',
-                                },
-                              },
-                            }}
-                          />
+                        <div className="text-2xl font-bold">
+                          #{stats.leetcode.stats.ranking.toLocaleString()}
                         </div>
+                        <p className="text-xs text-muted-foreground">
+                          Global ranking
+                        </p>
                       </CardContent>
                     </Card>
+                  )}
 
+                  {stats.codeforces && (
                     <Card>
-                      <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                          <Brain className="h-5 w-5" />
-                          Skills Breakdown
-                        </CardTitle>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Codeforces Rating</CardTitle>
+                        <SiCodeforces className="h-4 w-4 text-blue-500" />
                       </CardHeader>
-                      <CardContent className="space-y-4">
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Problem Solving</span>
-                            <div className="flex items-center gap-2">
-                              <Progress value={75} className="w-20 h-2" />
-                              <span className="text-xs font-medium">75%</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Algorithm Knowledge</span>
-                            <div className="flex items-center gap-2">
-                              <Progress value={85} className="w-20 h-2" />
-                              <span className="text-xs font-medium">85%</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Data Structures</span>
-                            <div className="flex items-center gap-2">
-                              <Progress value={70} className="w-20 h-2" />
-                              <span className="text-xs font-medium">70%</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm">Competitive Programming</span>
-                            <div className="flex items-center gap-2">
-                              <Progress value={90} className="w-20 h-2" />
-                              <span className="text-xs font-medium">90%</span>
-                            </div>
-                          </div>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {stats.codeforces.user.rating}
                         </div>
+                        <p className={cn("text-xs", getRankColor(stats.codeforces.user.rank))}>
+                          {stats.codeforces.user.rank}
+                        </p>
                       </CardContent>
                     </Card>
-                  </div>
-                )}
+                  )}
+
+                  {stats.leetcode && (
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Acceptance Rate</CardTitle>
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                      </CardHeader>
+                      <CardContent>
+                        <div className="text-2xl font-bold">
+                          {stats.leetcode.stats.acceptanceRate.toFixed(1)}%
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Problem success rate
+                        </p>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
               </TabsContent>
 
               {/* LeetCode Detailed Tab */}
@@ -1138,7 +933,7 @@ const Statistics = () => {
                 </div>
               </TabsContent>
             </Tabs>
-          </section>
+          </div>
         )}
       </div>
     </Layout>

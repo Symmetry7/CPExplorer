@@ -10,6 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { problemStore } from "@/lib/problem-store";
 import { Problem, ProblemState } from "@/lib/types";
+import { isProblemSolved } from "@/lib/utils";
 import {
   Code2,
   RefreshCw,
@@ -75,11 +76,11 @@ const Index = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Hero Section */}
         <section className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-code-500/10 to-primary/10 rounded-2xl" />
-          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-8 md:p-12">
+          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-6 sm:p-8 md:p-12">
             <div className="max-w-4xl">
               <div className="flex items-center gap-2 mb-4">
                 <Badge
@@ -87,20 +88,21 @@ const Index = () => {
                   className="bg-primary/10 text-primary border-primary/20"
                 >
                   <Sparkles className="h-3 w-3 mr-1" />
-                  Problem Discovery Platform
+                  <span className="hidden sm:inline">Problem Discovery Platform</span>
+                  <span className="sm:hidden">Platform</span>
                 </Badge>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
                 Discover{" "}
                 <span className="gradient-text">Competitive Programming</span>{" "}
                 Problems
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 max-w-3xl">
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-3xl">
                 Explore thousands of problems from LeetCode and Codeforces with
                 advanced filtering, difficulty ratings, and comprehensive
                 search. Find the perfect problems to enhance your coding skills.
               </p>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <Button
                   onClick={handleRefresh}
                   disabled={state.loading}
@@ -112,7 +114,7 @@ const Index = () => {
                   {state.loading ? "Loading..." : "Refresh Problems"}
                 </Button>
                 <Link to="/statistics">
-                  <Button variant="outline" className="gap-2">
+                  <Button variant="outline" className="gap-2 w-full sm:w-auto">
                     <TrendingUp className="h-5 w-5" />
                     View Statistics
                   </Button>
@@ -123,7 +125,7 @@ const Index = () => {
         </section>
 
         {/* Stats Cards */}
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -199,98 +201,97 @@ const Index = () => {
                 {stats.filtered.toLocaleString()}
               </div>
               <p className="text-xs text-muted-foreground">
-                Matching your criteria
+                Current filters applied
               </p>
             </CardContent>
           </Card>
         </section>
 
-        {/* Error State */}
-        {state.error && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                <div className="flex-1">
-                  <p className="font-medium">Unable to load problems</p>
-                  <p className="text-sm opacity-90">{state.error}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleRefresh}
-                  disabled={state.loading}
-                  className="min-w-[80px]"
-                >
-                  {state.loading ? "Retrying..." : "Retry"}
-                </Button>
-              </div>
-            </AlertDescription>
-          </Alert>
-        )}
-
         {/* Filters */}
-        <section>
-          <ProblemFilters
-            filters={state.filters}
-            selectedTags={state.selectedTags}
-            availableTags={state.availableTags}
-            availableContestTypes={state.availableContestTypes}
-            availableProblemTypes={state.availableProblemTypes}
-            availableContestEras={state.availableContestEras}
-            onFiltersChange={handleFiltersChange}
-            onTagsChange={handleTagsChange}
-            totalProblems={stats.total}
-            filteredCount={stats.filtered}
-          />
-        </section>
+        <ProblemFilters
+          filters={state.filters}
+          availableTags={state.availableTags}
+          selectedTags={state.selectedTags}
+          availableContestTypes={state.availableContestTypes}
+          availableProblemTypes={state.availableProblemTypes}
+          availableContestEras={state.availableContestEras}
+          onFiltersChange={handleFiltersChange}
+          onTagsChange={handleTagsChange}
+          totalProblems={stats.total}
+          filteredCount={stats.filtered}
+        />
 
-        {/* Problems Grid */}
-        <section className="space-y-6">
+        {/* Problems List */}
+        <section>
           {state.loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {Array.from({ length: 12 }).map((_, index) => (
-                <Skeleton key={index} className="h-48 w-full" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Card key={i} className="h-48">
+                  <CardHeader>
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardHeader>
+                  <CardContent>
+                    <Skeleton className="h-4 w-full mb-2" />
+                    <Skeleton className="h-4 w-2/3" />
+                  </CardContent>
+                </Card>
               ))}
             </div>
-          ) : currentProblems.length > 0 ? (
+          ) : state.error ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>{state.error}</AlertDescription>
+            </Alert>
+          ) : currentProblems.length === 0 ? (
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                No problems found matching your filters. Try adjusting your search criteria.
+              </AlertDescription>
+            </Alert>
+          ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {currentProblems.map((problem) => (
-                  <ProblemCard key={problem.id} problem={problem} />
+                  <ProblemCard 
+                    key={problem.id} 
+                    problem={problem} 
+                    isSolved={isProblemSolved(
+                      problem.id,
+                      problem.platform,
+                      state.filters.leetcodeHandle,
+                      state.filters.codeforcesHandle
+                    )}
+                  />
                 ))}
               </div>
 
-              {/* Pagination Controls */}
-              <div className="flex items-center justify-between">
-                <Button
-                  onClick={handlePrevPage}
-                  disabled={currentPage === 1}
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  Page {currentPage} of {totalPages}
-                </span>
-                <Button
-                  onClick={handleNextPage}
-                  disabled={currentPage === totalPages}
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </div>
+              {/* Pagination */}
+              {totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-8">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleNextPage}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </Button>
+                </div>
+              )}
             </>
-          ) : (
-            <div className="text-center py-16">
-              <p className="text-lg font-semibold text-muted-foreground">
-                No problems match your current filters.
-              </p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Try adjusting your search criteria.
-              </p>
-            </div>
           )}
         </section>
       </div>

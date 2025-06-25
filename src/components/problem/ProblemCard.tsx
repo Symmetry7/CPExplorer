@@ -3,16 +3,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
-import { ExternalLink, Star, Users, Trophy } from "lucide-react";
+import { ExternalLink, Star, Users, Trophy, CheckCircle } from "lucide-react";
 
 interface ProblemCardProps {
   problem: Problem;
   className?: string;
   hideRating?: boolean;
   contestMode?: boolean;
+  isSolved?: boolean;
 }
 
-export function ProblemCard({ problem, className, hideRating = false, contestMode = false }: ProblemCardProps) {
+export function ProblemCard({ problem, className, hideRating = false, contestMode = false, isSolved = false }: ProblemCardProps) {
   const getPlatformColor = (platform: string) => {
     switch (platform) {
       case "leetcode":
@@ -76,7 +77,7 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between">
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
               <Badge
                 variant="outline"
                 className={cn(
@@ -86,6 +87,15 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
               >
                 {problem.platform === "leetcode" ? "LeetCode" : "Codeforces"}
               </Badge>
+              {isSolved && (
+                <Badge
+                  variant="outline"
+                  className="bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300 text-xs gap-1"
+                >
+                  <CheckCircle className="h-3 w-3" />
+                  Solved
+                </Badge>
+              )}
               {!hideRating && !contestMode && (
                 <>
                   <Badge
@@ -106,7 +116,7 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
                 </>
               )}
             </div>
-            <h3 className="font-semibold leading-tight mb-2 group-hover:text-primary transition-colors">
+            <h3 className="font-semibold leading-tight mb-2 group-hover:text-primary transition-colors text-sm sm:text-base">
               {problem.title}
             </h3>
           </div>
@@ -118,7 +128,7 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
           {/* Tags */}
           {problem.tags.length > 0 && (
             <div className="flex flex-wrap gap-1">
-              {[...new Set(problem.tags)].slice(0, 4).map((tag, index) => (
+              {[...new Set(problem.tags)].slice(0, 3).map((tag, index) => (
                 <Badge
                   key={`${problem.id}-tag-${index}-${tag}`}
                   variant="outline"
@@ -127,25 +137,25 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
                   {tag}
                 </Badge>
               ))}
-              {[...new Set(problem.tags)].length > 4 && (
+              {[...new Set(problem.tags)].length > 3 && (
                 <Badge
                   key={`${problem.id}-more-tags`}
                   variant="outline"
                   className="text-xs text-muted-foreground"
                 >
-                  +{[...new Set(problem.tags)].length - 4}
+                  +{[...new Set(problem.tags)].length - 3}
                 </Badge>
               )}
             </div>
           )}
 
           {/* Stats */}
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-sm text-muted-foreground">
+            <div className="flex items-center gap-4 flex-wrap">
               {problem.contestType && problem.platform === 'codeforces' && (
                 <div className="flex items-center gap-1" title={problem.contestType}>
                   <Trophy className="h-4 w-4" />
-                  <span className="truncate max-w-[150px]">{problem.contestType}</span>
+                  <span className="truncate max-w-[120px] sm:max-w-[150px]">{problem.contestType}</span>
                 </div>
               )}
               {problem.contestId && problem.platform === 'leetcode' && (
@@ -165,7 +175,7 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
             <Button
               variant="ghost"
               size="sm"
-              className="gap-2 opacity-0 group-hover:opacity-100 transition-opacity"
+              className="gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-full sm:w-auto"
               asChild
             >
               <a href={problem.url} target="_blank" rel="noopener noreferrer">

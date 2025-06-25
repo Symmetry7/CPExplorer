@@ -32,6 +32,7 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
 
     for (const endpoint of apiEndpoints) {
       try {
+        console.log(`Trying endpoint: ${endpoint}`);
         const response = await fetch(endpoint, {
           headers: {
             Accept: "application/json",
@@ -63,8 +64,11 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
               }
             });
 
+            console.log(`Successfully fetched from ${endpoint}`);
             break; // Success, exit loop
           }
+        } else {
+          console.log(`Failed to fetch from ${endpoint}: ${response.status} ${response.statusText}`);
         }
       } catch (err) {
         console.log(`Failed to fetch from ${endpoint}:`, err);
@@ -74,6 +78,7 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
 
     // Try GraphQL endpoint for more detailed data
     if (tagMap.size === 0) {
+      console.log("Trying GraphQL endpoint for more detailed tag data...");
       try {
         const graphqlQuery = {
           query: `
@@ -114,6 +119,7 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
 
         for (const endpoint of graphqlEndpoints) {
           try {
+            console.log(`Trying GraphQL endpoint: ${endpoint}`);
             const response = await fetch(endpoint, {
               method: "POST",
               headers: {
@@ -141,8 +147,11 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
                     }
                   },
                 );
+                console.log(`Successfully fetched from GraphQL endpoint: ${endpoint}`);
                 break;
               }
+            } else {
+              console.log(`GraphQL request failed for ${endpoint}: ${response.status} ${response.statusText}`);
             }
           } catch (err) {
             console.log(`GraphQL request failed for ${endpoint}:`, err);
@@ -247,6 +256,7 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
       // Use real tags from LeetCode API if available
       if (leetcodeTagsMap.has(problem.TitleSlug)) {
         tags = leetcodeTagsMap.get(problem.TitleSlug) || [];
+        console.log(`✅ Found real tags for ${problem.TitleSlug}:`, tags);
       } else {
         // Fallback to comprehensive tag estimation
         const title = problem.TitleSlug.toLowerCase();
@@ -328,6 +338,14 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
           else if (problem.Rating < 2000) tags.push("Dynamic Programming");
           else tags.push("Advanced");
         }
+        
+        console.log(`📝 Estimated tags for ${problem.TitleSlug}:`, tags);
+      }
+
+      // Ensure we always have at least one tag
+      if (tags.length === 0) {
+        tags = ["Algorithm"];
+        console.log(`⚠️ No tags found for ${problem.TitleSlug}, using fallback tag`);
       }
 
       return {
@@ -345,6 +363,19 @@ export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
     console.log(
       `Enhanced ${problemsWithRealTags.length} LeetCode problems with tags (${leetcodeTagsMap.size > 0 ? "using real tag data" : "using estimated tags"})`,
     );
+    
+    // Debug: Count problems with tags
+    const problemsWithTags = problemsWithRealTags.filter(p => p.Tags && p.Tags.length > 0);
+    console.log(`📊 Problems with tags: ${problemsWithTags.length}/${problemsWithRealTags.length}`);
+    
+    // Show sample of problems with tags
+    if (problemsWithTags.length > 0) {
+      console.log("Sample problems with tags:", problemsWithTags.slice(0, 3).map(p => ({
+        title: p.TitleSlug,
+        tags: p.Tags
+      })));
+    }
+    
     return problemsWithRealTags;
   } catch (error) {
     console.error("Error fetching LeetCode problems:", error);

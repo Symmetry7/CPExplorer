@@ -16,7 +16,7 @@ export function Layout({ children }: LayoutProps) {
     >
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container mx-auto px-4 py-6">{children}</main>
+        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">{children}</main>
         <footer className="w-full text-center py-4 text-muted-foreground text-sm flex flex-col items-center gap-1">
           <span>
             Made with <span className="text-red-500">❤️</span> by Symmetry |

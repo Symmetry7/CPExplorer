@@ -35,6 +35,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 import { Search, Filter, X, Check, Settings, ChevronDown } from "lucide-react";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ProblemFiltersProps {
   filters: IFilters;
@@ -62,6 +63,7 @@ export function ProblemFilters({
   filteredCount,
 }: ProblemFiltersProps) {
   const [isTagsOpen, setIsTagsOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   const handleTagToggle = (tag: string) => {
     const newTags = selectedTags.includes(tag)
@@ -81,6 +83,8 @@ export function ProblemFilters({
       problemType: "all",
       contestEra: "all",
       questionNumber: "all",
+      leetcodeHandle: "",
+      codeforcesHandle: "",
     });
     onTagsChange([]);
   };
@@ -95,12 +99,14 @@ export function ProblemFilters({
     filters.problemType !== "all" ||
     filters.contestEra !== "all" ||
     filters.questionNumber !== "all" ||
+    filters.leetcodeHandle ||
+    filters.codeforcesHandle ||
     selectedTags.length > 0;
 
   return (
     <div className="space-y-4">
       {/* Search and Quick Filters */}
-      <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex flex-col gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -111,14 +117,15 @@ export function ProblemFilters({
           />
         </div>
 
-        <div className="flex gap-2">
+        {/* Mobile: Stack filters vertically, Desktop: Horizontal layout */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-2">
           <Select
             value={filters.platform || "all"}
             onValueChange={(value) =>
               onFiltersChange({ platform: value as any })
             }
           >
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full">
               <SelectValue placeholder="Platform" />
             </SelectTrigger>
             <SelectContent>
@@ -134,7 +141,7 @@ export function ProblemFilters({
               value={filters.questionNumber || "all"}
               onValueChange={(value) => onFiltersChange({ questionNumber: value as any })}
             >
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Question Number" />
               </SelectTrigger>
               <SelectContent>
@@ -153,7 +160,7 @@ export function ProblemFilters({
               value={filters.difficulty || "all"}
               onValueChange={(value) => onFiltersChange({ difficulty: value })}
             >
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Difficulty" />
               </SelectTrigger>
               <SelectContent>
@@ -174,7 +181,7 @@ export function ProblemFilters({
                 onFiltersChange({ contestType: value as any })
               }
             >
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Contest Type" />
               </SelectTrigger>
               <SelectContent>
@@ -199,7 +206,7 @@ export function ProblemFilters({
                 onFiltersChange({ problemType: value as any })
               }
             >
-              <SelectTrigger className="w-[120px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Problem Type" />
               </SelectTrigger>
               <SelectContent>
@@ -225,7 +232,7 @@ export function ProblemFilters({
                 onFiltersChange({ contestEra: value as any })
               }
             >
-              <SelectTrigger className="w-[130px]">
+              <SelectTrigger className="w-full">
                 <SelectValue placeholder="Contest Era" />
               </SelectTrigger>
               <SelectContent>
@@ -239,12 +246,12 @@ export function ProblemFilters({
           {/* Advanced Filters Sheet */}
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" className="gap-2">
+              <Button variant="outline" className="gap-2 w-full">
                 <Settings className="h-4 w-4" />
                 <span className="hidden sm:inline">Advanced</span>
               </Button>
             </SheetTrigger>
-            <SheetContent>
+            <SheetContent className="w-full sm:max-w-md">
               <SheetHeader>
                 <SheetTitle>Advanced Filters</SheetTitle>
                 <SheetDescription>
@@ -320,6 +327,46 @@ export function ProblemFilters({
 
                 <Separator />
 
+                {/* User Handles */}
+                <div className="space-y-3">
+                  <Label className="text-sm font-medium">User Handles</Label>
+                  <div className="space-y-3">
+                    <div>
+                      <Label
+                        htmlFor="leetcodeHandle"
+                        className="text-xs text-muted-foreground"
+                      >
+                        LeetCode Handle
+                      </Label>
+                      <Input
+                        id="leetcodeHandle"
+                        placeholder="Enter your LeetCode username"
+                        value={filters.leetcodeHandle || ""}
+                        onChange={(e) => onFiltersChange({ leetcodeHandle: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <Label
+                        htmlFor="codeforcesHandle"
+                        className="text-xs text-muted-foreground"
+                      >
+                        Codeforces Handle
+                      </Label>
+                      <Input
+                        id="codeforcesHandle"
+                        placeholder="Enter your Codeforces handle"
+                        value={filters.codeforcesHandle || ""}
+                        onChange={(e) => onFiltersChange({ codeforcesHandle: e.target.value })}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Add your handles to see which problems you've solved
+                  </p>
+                </div>
+
+                <Separator />
+
                 {/* Tags */}
                 <div className="space-y-3">
                   <Label className="text-sm font-medium">
@@ -340,7 +387,7 @@ export function ProblemFilters({
                         <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-full p-0">
+                    <PopoverContent className="w-full p-0" align="start">
                       <Command>
                         <CommandInput placeholder="Search tags..." />
                         <CommandEmpty>No tags found.</CommandEmpty>
@@ -416,9 +463,11 @@ export function ProblemFilters({
 
       {/* Active Filters */}
       {hasActiveFilters && (
-        <div className="flex items-center gap-2 text-sm">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <span className="text-muted-foreground">Active filters:</span>
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+          <div className="flex items-center gap-2">
+            <Filter className="h-4 w-4 text-muted-foreground" />
+            <span className="text-muted-foreground">Active filters:</span>
+          </div>
           <div className="flex flex-wrap gap-1">
             {filters.platform !== "all" && (
               <Badge variant="secondary" className="gap-1">
@@ -465,7 +514,7 @@ export function ProblemFilters({
                 />
               </Badge>
             )}
-            {selectedTags.slice(0, 3).map((tag, index) => (
+            {selectedTags.slice(0, isMobile ? 2 : 3).map((tag, index) => (
               <Badge
                 key={`active-tag-${index}-${tag}`}
                 variant="secondary"
@@ -478,15 +527,15 @@ export function ProblemFilters({
                 />
               </Badge>
             ))}
-            {selectedTags.length > 3 && (
-              <Badge variant="secondary">+{selectedTags.length - 3} more</Badge>
+            {selectedTags.length > (isMobile ? 2 : 3) && (
+              <Badge variant="secondary">+{selectedTags.length - (isMobile ? 2 : 3)} more</Badge>
             )}
           </div>
           <Button
             variant="ghost"
             size="sm"
             onClick={clearFilters}
-            className="ml-auto text-xs"
+            className="sm:ml-auto text-xs"
           >
             Clear all
           </Button>

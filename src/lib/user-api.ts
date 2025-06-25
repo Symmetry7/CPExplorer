@@ -401,3 +401,122 @@ export function computeAdvancedCodeforcesStats(
     maxACs,
   };
 }
+
+// API functions to check recent submissions and verify solved problems
+
+interface LeetCodeSubmission {
+  id: number;
+  title: string;
+  titleSlug: string;
+  status: string;
+  timestamp: number;
+}
+
+interface CodeforcesSubmission {
+  id: number;
+  problem: {
+    contestId: number;
+    index: string;
+    name: string;
+  };
+  verdict: string;
+  creationTimeSeconds: number;
+}
+
+// Check if a LeetCode problem was recently solved
+export async function checkLeetCodeSubmission(
+  problemTitleSlug: string,
+  username: string,
+  timeWindow: number = 24 * 60 * 60 * 1000 // 24 hours in milliseconds
+): Promise<boolean> {
+  try {
+    // For demo purposes, we'll simulate the API call
+    // In a real implementation, you would call the LeetCode GraphQL API
+    console.log(`Checking LeetCode submission for ${problemTitleSlug} by ${username}`);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulate checking recent submissions
+    // In reality, you would fetch from: https://leetcode.com/graphql
+    const mockSubmissions: LeetCodeSubmission[] = [
+      {
+        id: 1,
+        title: "Two Sum",
+        titleSlug: "two-sum",
+        status: "ac",
+        timestamp: Date.now() - 1000 * 60 * 30 // 30 minutes ago
+      }
+    ];
+    
+    const recentSubmission = mockSubmissions.find(
+      sub => sub.titleSlug === problemTitleSlug && 
+             sub.status === "ac" && 
+             Date.now() - sub.timestamp < timeWindow
+    );
+    
+    return !!recentSubmission;
+  } catch (error) {
+    console.error("Error checking LeetCode submission:", error);
+    return false;
+  }
+}
+
+// Check if a Codeforces problem was recently solved
+export async function checkCodeforcesSubmission(
+  contestId: number,
+  problemIndex: string,
+  username: string,
+  timeWindow: number = 24 * 60 * 60 // 24 hours in seconds
+): Promise<boolean> {
+  try {
+    // For demo purposes, we'll simulate the API call
+    // In a real implementation, you would call the Codeforces API
+    console.log(`Checking Codeforces submission for ${contestId}${problemIndex} by ${username}`);
+    
+    // Simulate API delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Simulate checking recent submissions
+    // In reality, you would fetch from: https://codeforces.com/api/user.status?handle={username}
+    const mockSubmissions: CodeforcesSubmission[] = [
+      {
+        id: 1,
+        problem: {
+          contestId: 1,
+          index: "A",
+          name: "Test Problem"
+        },
+        verdict: "OK",
+        creationTimeSeconds: Math.floor(Date.now() / 1000) - 60 * 30 // 30 minutes ago
+      }
+    ];
+    
+    const recentSubmission = mockSubmissions.find(
+      sub => sub.problem.contestId === contestId && 
+             sub.problem.index === problemIndex && 
+             sub.verdict === "OK" && 
+             Math.floor(Date.now() / 1000) - sub.creationTimeSeconds < timeWindow
+    );
+    
+    return !!recentSubmission;
+  } catch (error) {
+    console.error("Error checking Codeforces submission:", error);
+    return false;
+  }
+}
+
+// Get problem identifier for checking submissions
+export function getProblemIdentifier(problem: any): { contestId?: number; problemIndex?: string; titleSlug?: string } {
+  if (problem.platform === "leetcode") {
+    // Extract titleSlug from LeetCode problem
+    const titleSlug = problem.title.toLowerCase().replace(/[^a-z0-9]/g, '-');
+    return { titleSlug };
+  } else if (problem.platform === "codeforces") {
+    // Extract contestId and problemIndex from Codeforces problem
+    const contestId = parseInt(problem.contestId as string);
+    const problemIndex = problem.id.split('-').pop(); // Extract the problem index
+    return { contestId, problemIndex };
+  }
+  return {};
+}

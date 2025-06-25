@@ -78,6 +78,9 @@ export interface ProblemFilters {
   contestEra?: "all" | "new" | "old";
   // LeetCode specific filter
   questionNumber?: "all" | "Q1" | "Q2" | "Q3" | "Q4";
+  // User handles for solved status
+  leetcodeHandle?: string;
+  codeforcesHandle?: string;
 }
 
 // UI State Types

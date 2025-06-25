@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { problemStore } from "@/lib/problem-store";
 import { trainingLevels } from "@/lib/training-levels";
 import { Problem } from "@/lib/types";
+import { isProblemSolved } from "@/lib/utils";
+import { checkLeetCodeSubmission, checkCodeforcesSubmission, getProblemIdentifier } from "@/lib/user-api";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -20,12 +22,13 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProblemCard } from "@/components/problem/ProblemCard";
-import { Dices, Zap, Timer, Play, Pause, StopCircle, Eye, EyeOff, ExternalLink, Info, Code2, Target, BookOpen, Sparkles } from "lucide-react";
+import { Dices, Zap, Timer, Play, Pause, StopCircle, Eye, EyeOff, ExternalLink, Info, Code2, Target, BookOpen, Sparkles, CheckCircle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Layout } from "@/components/layout/Layout";
+import { Input } from "@/components/ui/input";
 
 function getRandomElement<T>(arr: T[]): T | undefined {
   if (arr.length === 0) return undefined;
@@ -59,6 +62,13 @@ export function TrainingGymPage() {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [isTimerPaused, setIsTimerPaused] = useState(false);
 
+  // New state for scoring system
+  const [solvedProblems, setSolvedProblems] = useState<Set<string>>(new Set());
+  const [score, setScore] = useState(0);
+  const [isCheckingSubmission, setIsCheckingSubmission] = useState<string | null>(null);
+  const [leetcodeHandle, setLeetcodeHandle] = useState("");
+  const [codeforcesHandle, setCodeforcesHandle] = useState("");
+
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
     if (isTimerRunning && !isTimerPaused && timeRemaining > 0) {
@@ -78,6 +88,8 @@ export function TrainingGymPage() {
     setPlatform(newPlatform);
     setLevel(1); // Reset level on platform change
     setGeneratedProblems([]); // Clear problems
+    setSolvedProblems(new Set());
+    setScore(0);
   };
 
   const formatTime = (seconds: number) => {
@@ -152,6 +164,8 @@ export function TrainingGymPage() {
     setTimeRemaining(TOTAL_TIME);
     setIsTimerRunning(true);
     setIsTimerPaused(false);
+    setSolvedProblems(new Set());
+    setScore(0);
 
     if (newProblems.length > 0) {
       toast.success(`Generated a new set of ${newProblems.length} problems for ${platform === "codeforces" ? "Codeforces" : "LeetCode"} Level ${level}! Timer started.`);
@@ -171,14 +185,59 @@ export function TrainingGymPage() {
     setIsTimerRunning(false);
     setTimeRemaining(TOTAL_TIME);
     setGeneratedProblems([]);
+    setSolvedProblems(new Set());
+    setScore(0);
     toast.warning("Training session stopped and reset.");
+  };
+
+  const handleSolveProblem = async (problem: Problem) => {
+    if (solvedProblems.has(problem.id)) {
+      toast.info("This problem has already been marked as solved!");
+      return;
+    }
+
+    const currentHandle = problem.platform === "leetcode" ? leetcodeHandle : codeforcesHandle;
+    if (!currentHandle) {
+      toast.error(`Please enter your ${problem.platform === "leetcode" ? "LeetCode username" : "Codeforces handle"} to verify solutions.`);
+      return;
+    }
+
+    setIsCheckingSubmission(problem.id);
+
+    try {
+      let isSolved = false;
+      const identifier = getProblemIdentifier(problem);
+
+      if (problem.platform === "leetcode" && identifier.titleSlug) {
+        isSolved = await checkLeetCodeSubmission(identifier.titleSlug, currentHandle);
+      } else if (problem.platform === "codeforces" && identifier.contestId && identifier.problemIndex) {
+        isSolved = await checkCodeforcesSubmission(identifier.contestId, identifier.problemIndex, currentHandle);
+      }
+
+      if (isSolved) {
+        setSolvedProblems(prev => new Set([...prev, problem.id]));
+        setScore(prev => prev + 100);
+        toast.success(`🎉 Problem solved! +100 points! Total: ${score + 100}/400`);
+        
+        // Check if all problems are solved
+        if (solvedProblems.size + 1 === generatedProblems.length) {
+          toast.success("🏆 Congratulations! You've solved all problems in this set!");
+        }
+      } else {
+        toast.error("No recent successful submission found for this problem. Make sure you've solved it recently!");
+      }
+    } catch (error) {
+      toast.error("Error checking submission. Please try again.");
+    } finally {
+      setIsCheckingSubmission(null);
+    }
   };
 
   const renderProblemDetails = (problem: Problem) => {
     if (!showDetails) return null;
     
     return (
-      <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-2">
+      <div className="mt-3 p-3 bg-muted/50 rounded-lg space-y-3">
         <div className="flex items-center gap-2">
           <Info className="h-4 w-4 text-muted-foreground" />
           <span className="text-sm font-medium text-muted-foreground">Problem Details</span>
@@ -205,6 +264,55 @@ export function TrainingGymPage() {
             </span>
           </div>
         </div>
+        
+        {/* Tags Section */}
+        {problem.tags && problem.tags.length > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-muted-foreground">Topics:</span>
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {problem.tags.map((tag, index) => (
+                <Badge
+                  key={`${problem.id}-detail-tag-${index}-${tag}`}
+                  variant="outline"
+                  className="text-xs"
+                >
+                  {tag}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Solve Button */}
+        <div className="pt-3 border-t">
+          {solvedProblems.has(problem.id) ? (
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle className="h-4 w-4" />
+              <span className="text-sm font-medium">Solved! +100 points</span>
+            </div>
+          ) : (
+            <Button
+              onClick={() => handleSolveProblem(problem)}
+              disabled={isCheckingSubmission === problem.id}
+              className="w-full"
+              size="sm"
+            >
+              {isCheckingSubmission === problem.id ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Checking...
+                </>
+              ) : (
+                <>
+                  <CheckCircle className="h-4 w-4 mr-2" />
+                  Mark as Solved (+100 pts)
+                </>
+              )}
+            </Button>
+          )}
+        </div>
       </div>
     );
   };
@@ -215,11 +323,11 @@ export function TrainingGymPage() {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Hero Section */}
         <section className="relative">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-code-500/10 to-primary/10 rounded-2xl" />
-          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-8 md:p-12">
+          <div className="relative bg-card/50 backdrop-blur-sm border rounded-2xl p-6 sm:p-8 md:p-12">
             <div className="max-w-4xl">
               <div className="flex items-center gap-2 mb-4">
                 <Badge
@@ -227,13 +335,14 @@ export function TrainingGymPage() {
                   className="bg-primary/10 text-primary border-primary/20"
                 >
                   <Dices className="h-3 w-3 mr-1" />
-                  Skill Enhancement Zone
+                  <span className="hidden sm:inline">Skill Enhancement Zone</span>
+                  <span className="sm:hidden">Training Zone</span>
                 </Badge>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold mb-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4">
                 The <span className="gradient-text">Training Gym</span>
               </h1>
-              <p className="text-lg text-muted-foreground mb-8 max-w-3xl">
+              <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-3xl">
                 Sharpen your competitive programming skills. Select a platform and level to generate a timed problem set. Good luck!
               </p>
             </div>
@@ -241,7 +350,7 @@ export function TrainingGymPage() {
         </section>
 
         {/* Controls and Timer Section */}
-        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
           {/* Controls */}
           <div className="lg:col-span-2">
             <Card>
@@ -271,7 +380,7 @@ export function TrainingGymPage() {
                 </div>
                 <div>
                   <label className="text-sm font-medium mb-2 block">2. Select Level</label>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col sm:flex-row gap-4">
                     <Select
                       value={level.toString()}
                       onValueChange={(value) => setLevel(Number(value))}
@@ -290,7 +399,7 @@ export function TrainingGymPage() {
                     </Select>
                     {platform === "codeforces" && (
                        <a href="https://docs.google.com/spreadsheets/d/1gdD-syEpfy10Vz1f5UAm5eKiV_UAEdG-C4jrouN57bs/edit?gid=1667320122#gid=1667320122" target="_blank" rel="noopener noreferrer">
-                         <Button variant="outline" className="h-full">
+                         <Button variant="outline" className="h-full w-full sm:w-auto">
                            <ExternalLink className="h-4 w-4 mr-2" />
                            View Levels
                          </Button>
@@ -299,7 +408,7 @@ export function TrainingGymPage() {
                      {platform === "leetcode" && (
                        <Dialog>
                          <DialogTrigger asChild>
-                           <Button variant="outline">
+                           <Button variant="outline" className="w-full sm:w-auto">
                              <BookOpen className="h-4 w-4 mr-2" />
                              View Levels
                            </Button>
@@ -325,7 +434,31 @@ export function TrainingGymPage() {
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-2 block">3. Start Training</label>
+                  <label className="text-sm font-medium mb-2 block">3. Enter Your Handles (Optional)</label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">LeetCode Username</label>
+                      <Input
+                        placeholder="Your LeetCode username"
+                        value={leetcodeHandle}
+                        onChange={(e) => setLeetcodeHandle(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs text-muted-foreground block mb-1">Codeforces Handle</label>
+                      <Input
+                        placeholder="Your Codeforces handle"
+                        value={codeforcesHandle}
+                        onChange={(e) => setCodeforcesHandle(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Add your handles to verify solved problems and earn points
+                  </p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-2 block">4. Start Training</label>
                    <Button
                     onClick={handleGenerateProblems}
                     disabled={isLoading}
@@ -351,14 +484,28 @@ export function TrainingGymPage() {
                 <CardDescription>A 2-hour timer for your focused practice session.</CardDescription>
               </CardHeader>
               <CardContent className="flex-grow flex flex-col items-center justify-center">
-                <div className="text-6xl font-bold tracking-tighter text-center my-4 font-mono bg-muted p-4 rounded-lg">
+                <div className="text-4xl sm:text-6xl font-bold tracking-tighter text-center my-4 font-mono bg-muted p-4 rounded-lg">
                   {formatTime(timeRemaining)}
                 </div>
-                <div className="flex gap-2 mt-4">
+                
+                {/* Score Display */}
+                {generatedProblems.length > 0 && (
+                  <div className="text-center mb-4">
+                    <div className="text-2xl font-bold text-primary">
+                      {score} / 400 pts
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {solvedProblems.size} of {generatedProblems.length} solved
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex flex-col sm:flex-row gap-2 mt-4 w-full">
                   <Button
                     onClick={handleTimerToggle}
                     disabled={!isTimerRunning}
                     variant="outline"
+                    className="w-full sm:w-auto"
                   >
                     {isTimerPaused ? <Play className="h-4 w-4 mr-2" /> : <Pause className="h-4 w-4 mr-2" />}
                     {isTimerPaused ? "Resume" : "Pause"}
@@ -367,6 +514,7 @@ export function TrainingGymPage() {
                     onClick={handleTimerStop}
                     disabled={!isTimerRunning}
                     variant="destructive"
+                    className="w-full sm:w-auto"
                   >
                     <StopCircle className="h-4 w-4 mr-2" />
                     Stop & Reset
@@ -380,20 +528,32 @@ export function TrainingGymPage() {
         {/* Generated Problems Section */}
         {generatedProblems.length > 0 && (
           <section>
-            <div className="flex justify-between items-center mb-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
               <h2 className="text-2xl font-bold">Your Problem Set</h2>
               <Button onClick={() => setShowDetails(!showDetails)} variant="outline">
                 {showDetails ? <EyeOff className="h-4 w-4 mr-2" /> : <Eye className="h-4 w-4 mr-2" />}
                 {showDetails ? "Hide Details" : "Show Details"}
               </Button>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-2 gap-4">
-              {generatedProblems.map((problem) => (
-                <div key={problem.id} className="bg-card border rounded-lg p-4">
-                  <ProblemCard problem={problem} contestMode={true} />
-                  {renderProblemDetails(problem)}
-                </div>
-              ))}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {generatedProblems.map((problem) => {
+                const currentFilters = problemStore.getState().filters;
+                return (
+                  <div key={problem.id} className="bg-card border rounded-lg p-4">
+                    <ProblemCard 
+                      problem={problem} 
+                      contestMode={true}
+                      isSolved={isProblemSolved(
+                        problem.id,
+                        problem.platform,
+                        currentFilters.leetcodeHandle,
+                        currentFilters.codeforcesHandle
+                      )}
+                    />
+                    {renderProblemDetails(problem)}
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}
@@ -414,3 +574,5 @@ export function TrainingGymPage() {
     </Layout>
   );
 } 
+
+export default TrainingGymPage; 
