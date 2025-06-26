@@ -115,14 +115,44 @@ export function TrainingGymPage() {
         return;
       }
 
-      const cfProblems = allProblems.filter((p) => p.platform === "codeforces" && p.rating);
+      // Filter Codeforces problems and prioritize fresh problems (after 2021)
+      // Contest IDs after ~1650 are generally from 2022 onwards
+      const cfProblems = allProblems
+        .filter((p) => p.platform === "codeforces" && p.rating)
+        .sort((a, b) => {
+          // Sort by contest ID in descending order (newer contests first)
+          const contestIdA = typeof a.contestId === 'number' ? a.contestId : parseInt(a.contestId as string) || 0;
+          const contestIdB = typeof b.contestId === 'number' ? b.contestId : parseInt(b.contestId as string) || 0;
+          return contestIdB - contestIdA; // Descending order for newer contests
+        });
+
+      // Prioritize fresh problems (contest ID >= 1650, which is roughly after 2021)
+      const freshProblems = cfProblems.filter(p => {
+        const contestId = typeof p.contestId === 'number' ? p.contestId : parseInt(p.contestId as string) || 0;
+        return contestId >= 1650; // After 2021 contests
+      });
+
       const targetRatings = [selectedLevelData.p1, selectedLevelData.p2, selectedLevelData.p3, selectedLevelData.p4];
 
       for (const rating of targetRatings) {
-        let potentialProblems = cfProblems.filter((p) => !usedProblemIds.has(p.id) && p.rating === rating);
+        // First try to find exact rating match from fresh contests (after 2021)
+        let potentialProblems = freshProblems.filter((p) => !usedProblemIds.has(p.id) && p.rating === rating);
+        
+        // If no fresh problems with exact rating, try fresh problems with nearby ratings
+        if (potentialProblems.length === 0) {
+          potentialProblems = freshProblems.filter((p) => !usedProblemIds.has(p.id) && p.rating && Math.abs(p.rating - rating) <= 50);
+        }
+        
+        // If still no fresh problems, fall back to older problems but still prioritize newer ones
+        if (potentialProblems.length === 0) {
+          potentialProblems = cfProblems.filter((p) => !usedProblemIds.has(p.id) && p.rating === rating);
+        }
+        
+        // Final fallback: any available problem with nearby rating
         if (potentialProblems.length === 0) {
           potentialProblems = cfProblems.filter((p) => !usedProblemIds.has(p.id) && p.rating && Math.abs(p.rating - rating) <= 50);
         }
+
         const randomProblem = getRandomElement(potentialProblems);
         if (randomProblem) {
           newProblems.push(randomProblem);
@@ -139,7 +169,16 @@ export function TrainingGymPage() {
         return;
       }
 
-      const lcProblems = allProblems.filter((p) => p.platform === "leetcode" && p.difficulty);
+      // Filter LeetCode problems and sort by contest ID (newer first) to prioritize fresh problems
+      const lcProblems = allProblems
+        .filter((p) => p.platform === "leetcode" && p.difficulty)
+        .sort((a, b) => {
+          // Sort by contest ID in descending order (newer contests first)
+          const contestIdA = typeof a.contestId === 'number' ? a.contestId : parseInt(a.contestId as string) || 0;
+          const contestIdB = typeof b.contestId === 'number' ? b.contestId : parseInt(b.contestId as string) || 0;
+          return contestIdB - contestIdA; // Descending order for newer contests
+        });
+
       const targetDifficulties = selectedLevelData.questions;
 
       for (const difficulty of targetDifficulties) {
@@ -168,7 +207,8 @@ export function TrainingGymPage() {
     setScore(0);
 
     if (newProblems.length > 0) {
-      toast.success(`Generated a new set of ${newProblems.length} problems for ${platform === "codeforces" ? "Codeforces" : "LeetCode"} Level ${level}! Timer started.`);
+      const platformText = platform === "codeforces" ? "Codeforces (fresh contests after 2021)" : "LeetCode";
+      toast.success(`Generated a fresh set of ${newProblems.length} problems for ${platformText} Level ${level}! Timer started.`);
     }
   };
 

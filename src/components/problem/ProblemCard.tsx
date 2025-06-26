@@ -178,7 +178,18 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
               className="gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity w-full sm:w-auto"
               asChild
             >
-              <a href={problem.url} target="_blank" rel="noopener noreferrer">
+              <a 
+                href={problem.url} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                onClick={(e) => {
+                  console.log(`Opening ${problem.platform} problem:`, {
+                    title: problem.title,
+                    url: problem.url,
+                    platform: problem.platform
+                  });
+                }}
+              >
                 <ExternalLink className="h-4 w-4" />
                 Solve
               </a>
@@ -195,7 +206,18 @@ export function ProblemCard({ problem, className, hideRating = false, contestMod
             className="gap-2 w-full justify-center"
             asChild
           >
-            <a href={problem.url} target="_blank" rel="noopener noreferrer">
+            <a 
+              href={problem.url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              onClick={(e) => {
+                console.log(`Opening ${problem.platform} problem (contest mode):`, {
+                  title: problem.title,
+                  url: problem.url,
+                  platform: problem.platform
+                });
+              }}
+            >
               <ExternalLink className="h-4 w-4" />
               Open Problem
             </a>

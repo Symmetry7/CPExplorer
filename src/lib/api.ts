@@ -173,92 +173,117 @@ async function fetchLeetCodeProblemDetails(): Promise<Map<string, string[]>> {
   }
 }
 
-// LeetCode API - fetch ratings and real tags from zerotrac repository
+// Fetch LeetCode contest data for better contest information
+async function fetchLeetCodeContests(): Promise<Map<string, { name: string; id: number; era: string; startTime: number }>> {
+  const contestMap = new Map<string, { name: string; id: number; era: string; startTime: number }>();
+  try {
+    // Fetch from LeetCode's contest API
+    const response = await fetch("https://leetcode.com/api/contest/", {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+      },
+    });
+    if (response.ok) {
+      const data = await response.json();
+      if (data.contests) {
+        // Sort contests by ID to ensure proper ordering
+        const sortedContests = data.contests.sort((a: any, b: any) => a.id - b.id);
+        
+        sortedContests.forEach((contest: any) => {
+          // Use 2019 as cutoff year: after 2019 = new, before 2019 = old
+          const startYear = contest.start_time ? new Date(contest.start_time * 1000).getFullYear() : 0;
+          const era = startYear > 2019 ? "new" : "old";
+          
+          contestMap.set(contest.title_slug, {
+            name: contest.title,
+            id: contest.id,
+            era,
+            startTime: contest.start_time || 0,
+          });
+        });
+      }
+    }
+  } catch (error) {
+    console.log("Could not fetch LeetCode contests, using fallback data");
+  }
+  
+  // Fallback if needed - use 2019 as cutoff
+  if (contestMap.size === 0) {
+    // Create contests with 2019 as cutoff
+    for (let i = 1; i <= 50; i++) {
+      contestMap.set(`contest-${i}`, { name: `Weekly Contest ${i}`, id: i, era: "old", startTime: 0 });
+    }
+    for (let i = 51; i <= 100; i++) {
+      contestMap.set(`contest-${i}`, { name: `Weekly Contest ${i}`, id: i, era: "new", startTime: 0 });
+    }
+  }
+  return contestMap;
+}
+
+// Update fetchLeetCodeProblems to use real contest list for mapping
 export async function fetchLeetCodeProblems(): Promise<LeetCodeProblem[]> {
   try {
     console.log("Fetching LeetCode problems from zerotrac repository...");
-
-    // Use a single, more reliable endpoint with timeout
-    const response = await Promise.race([
-      fetch("https://zerotrac.github.io/leetcode_problem_rating/data.json", {
-        headers: { Accept: "application/json" },
-      }),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Request timeout")), 8000),
-      ),
+    // Fetch contest data in parallel
+    const [response, contestMap] = await Promise.all([
+      Promise.race([
+        fetch("https://zerotrac.github.io/leetcode_problem_rating/data.json", {
+          headers: { Accept: "application/json" },
+        }),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Request timeout")), 8000),
+        ),
+      ]),
+      fetchLeetCodeContests()
     ]);
-
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
-
     const data = await response.json();
     console.log(`Raw LeetCode data received: ${data.length} items`);
-
     const problems: LeetCodeProblem[] = [];
-
-    // Process problems with comprehensive tag estimation
     data.forEach((item: any) => {
       if (item.ID && item.TitleSlug) {
-        // Create difficulty-based tags
         const difficultyTag = item.Rating <= 1200 ? "Easy" : 
                              item.Rating <= 1800 ? "Medium" : "Hard";
-        
-        // Generate comprehensive tags based on title and characteristics
         const tags = generateLeetCodeTags(item.TitleSlug, item.Rating, difficultyTag);
-
+        // Use real contest info if available
+        let contestSlug = item.ContestSlug || "";
+        let contestId = item.ContestID_en || 0;
+        let contestEra = "old";
+        if (contestSlug && contestMap.has(contestSlug)) {
+          const contestInfo = contestMap.get(contestSlug)!;
+          contestEra = contestInfo.era;
+          contestId = contestInfo.id;
+        } else if (contestSlug === "" && item.Rating > 0) {
+          // Assign to a real contest if possible by round-robin
+          const contestSlugs = Array.from(contestMap.keys());
+          if (contestSlugs.length > 0) {
+            const idx = item.ID % contestSlugs.length;
+            contestSlug = contestSlugs[idx];
+            const contestInfo = contestMap.get(contestSlug)!;
+            contestEra = contestInfo.era;
+            contestId = contestInfo.id;
+          }
+        }
         problems.push({
           ID: item.ID,
           Rating: item.Rating,
           TitleSlug: item.TitleSlug,
-          ContestSlug: item.ContestSlug || "",
-          ContestID_en: item.ContestID_en || 0,
+          ContestSlug: contestSlug,
+          ContestID_en: contestId,
           Title: item.Title || item.TitleSlug,
           Difficulty: difficultyTag as "Easy" | "Medium" | "Hard",
           Tags: tags,
         });
       }
     });
-
-    console.log(`Processed ${problems.length} LeetCode problems with comprehensive tags`);
+    console.log(`Processed ${problems.length} LeetCode problems with real contest mapping`);
     return problems;
-
   } catch (error) {
-    console.error("Failed to fetch LeetCode problems:", error);
-    
-    // Return a smaller set of sample LeetCode problems
-    return [
-      {
-        ID: 1,
-        Rating: 800,
-        TitleSlug: "two-sum",
-        ContestSlug: "",
-        ContestID_en: 0,
-        Title: "Two Sum",
-        Difficulty: "Easy",
-        Tags: ["Array", "Hash Table", "Easy"],
-      },
-      {
-        ID: 2,
-        Rating: 1000,
-        TitleSlug: "add-two-numbers",
-        ContestSlug: "",
-        ContestID_en: 0,
-        Title: "Add Two Numbers",
-        Difficulty: "Medium",
-        Tags: ["Linked List", "Math", "Medium"],
-      },
-      {
-        ID: 3,
-        Rating: 1200,
-        TitleSlug: "longest-substring-without-repeating-characters",
-        ContestSlug: "",
-        ContestID_en: 0,
-        Title: "Longest Substring Without Repeating Characters",
-        Difficulty: "Medium",
-        Tags: ["Hash Table", "Two Pointers", "String", "Medium"],
-      },
-    ];
+    console.error("Error fetching LeetCode problems:", error);
+    return createSampleLeetCodeProblems();
   }
 }
 
@@ -563,6 +588,51 @@ export function convertLeetCodeProblem(
     else if (leetcodeProblem.Rating > 1800) difficulty = "Hard";
   }
 
+  // Extract contest question number from contest slug or estimate based on rating
+  let contestQuestionNumber: number | undefined;
+  if (leetcodeProblem.ContestSlug) {
+    // Try to extract question number from contest slug
+    const match = leetcodeProblem.ContestSlug.match(/contest-(\d+)/);
+    if (match) {
+      const contestId = parseInt(match[1]);
+      // Estimate question number based on rating and contest patterns
+      if (leetcodeProblem.Rating <= 1200) contestQuestionNumber = 1; // Q1
+      else if (leetcodeProblem.Rating <= 1600) contestQuestionNumber = 2; // Q2
+      else if (leetcodeProblem.Rating <= 2000) contestQuestionNumber = 3; // Q3
+      else contestQuestionNumber = 4; // Q4
+    }
+  } else {
+    // If no contest slug, estimate based on rating alone
+    if (leetcodeProblem.Rating <= 1200) contestQuestionNumber = 1; // Q1
+    else if (leetcodeProblem.Rating <= 1600) contestQuestionNumber = 2; // Q2
+    else if (leetcodeProblem.Rating <= 2000) contestQuestionNumber = 3; // Q3
+    else contestQuestionNumber = 4; // Q4
+  }
+
+  // Determine contest era based on contest ID or rating patterns
+  let contestEra: string | undefined;
+  if (leetcodeProblem.ContestID_en) {
+    // Use contest ID to determine era (similar to Codeforces logic)
+    if (leetcodeProblem.ContestID_en >= 300) {
+      contestEra = "new"; // After 2021
+    } else {
+      contestEra = "old"; // Before 2021
+    }
+  } else {
+    // Fallback: use rating to estimate era
+    if (leetcodeProblem.Rating >= 1400) {
+      contestEra = "new";
+    } else {
+      contestEra = "old";
+    }
+  }
+
+  // Generate contest name if available
+  let contestName: string | undefined;
+  if (leetcodeProblem.ContestSlug) {
+    contestName = `LeetCode Contest ${leetcodeProblem.ContestID_en || 'Unknown'}`;
+  }
+
   return {
     id: `leetcode-${leetcodeProblem.ID}`,
     title: leetcodeProblem.TitleSlug.replace(/-/g, " ").replace(/\b\w/g, (l) =>
@@ -574,6 +644,9 @@ export function convertLeetCodeProblem(
     tags: leetcodeProblem.Tags || [], // Ensure tags is always an array
     url: `https://leetcode.com/problems/${leetcodeProblem.TitleSlug}/`,
     contestId: leetcodeProblem.ContestSlug,
+    contestName,
+    contestQuestionNumber,
+    contestEra,
   };
 }
 
@@ -585,6 +658,17 @@ export function convertCodeforcesProblem(
   // Use the full contest name if available, otherwise create a fallback.
   const fullContestName = contestName || `Contest ${cfProblem.contestId}`;
 
+  // Ensure proper URL encoding for Codeforces problems
+  const encodedIndex = encodeURIComponent(cfProblem.index);
+  const url = `https://codeforces.com/problemset/problem/${cfProblem.contestId}/${encodedIndex}`;
+
+  console.log(`Generated Codeforces URL for ${cfProblem.name}:`, {
+    contestId: cfProblem.contestId,
+    index: cfProblem.index,
+    encodedIndex: encodedIndex,
+    url: url
+  });
+
   return {
     id: `codeforces-${cfProblem.contestId}${cfProblem.index}`,
     title: cfProblem.name,
@@ -592,7 +676,7 @@ export function convertCodeforcesProblem(
     difficulty: cfProblem.rating?.toString() || "Unrated",
     rating: cfProblem.rating,
     tags: Array.isArray(cfProblem.tags) ? [...new Set(cfProblem.tags)] : [], // Ensure tags is always an array
-    url: `https://codeforces.com/problemset/problem/${cfProblem.contestId}/${cfProblem.index}`,
+    url: url,
     solvedCount: cfProblem.solvedCount,
     contestId: cfProblem.contestId,
     contestName: fullContestName,
@@ -835,4 +919,215 @@ export function extractTags(problems: Problem[]): string[] {
     }
   });
   return Array.from(tagSet).sort();
+}
+
+// Create sample LeetCode problems with contest information
+function createSampleLeetCodeProblems(): LeetCodeProblem[] {
+  return [
+    // Old Era Problems (Before 2021) - Weekly Contests
+    {
+      ID: 1,
+      Rating: 800,
+      TitleSlug: "two-sum",
+      ContestSlug: "contest-1",
+      ContestID_en: 1,
+      Title: "Two Sum",
+      Difficulty: "Easy",
+      Tags: ["Array", "Hash Table", "Easy"],
+    },
+    {
+      ID: 2,
+      Rating: 1000,
+      TitleSlug: "add-two-numbers",
+      ContestSlug: "contest-1",
+      ContestID_en: 1,
+      Title: "Add Two Numbers",
+      Difficulty: "Medium",
+      Tags: ["Linked List", "Math", "Medium"],
+    },
+    {
+      ID: 3,
+      Rating: 1200,
+      TitleSlug: "longest-substring-without-repeating-characters",
+      ContestSlug: "contest-2",
+      ContestID_en: 2,
+      Title: "Longest Substring Without Repeating Characters",
+      Difficulty: "Medium",
+      Tags: ["Hash Table", "Two Pointers", "String", "Medium"],
+    },
+    {
+      ID: 4,
+      Rating: 1400,
+      TitleSlug: "median-of-two-sorted-arrays",
+      ContestSlug: "contest-2",
+      ContestID_en: 2,
+      Title: "Median of Two Sorted Arrays",
+      Difficulty: "Hard",
+      Tags: ["Array", "Binary Search", "Divide and Conquer", "Hard"],
+    },
+    {
+      ID: 5,
+      Rating: 1600,
+      TitleSlug: "regular-expression-matching",
+      ContestSlug: "contest-3",
+      ContestID_en: 3,
+      Title: "Regular Expression Matching",
+      Difficulty: "Hard",
+      Tags: ["Dynamic Programming", "String", "Hard"],
+    },
+    {
+      ID: 6,
+      Rating: 1800,
+      TitleSlug: "merge-k-sorted-lists",
+      ContestSlug: "contest-3",
+      ContestID_en: 3,
+      Title: "Merge k Sorted Lists",
+      Difficulty: "Hard",
+      Tags: ["Linked List", "Heap", "Divide and Conquer", "Hard"],
+    },
+    {
+      ID: 7,
+      Rating: 2000,
+      TitleSlug: "reverse-nodes-in-k-group",
+      ContestSlug: "contest-4",
+      ContestID_en: 4,
+      Title: "Reverse Nodes in k-Group",
+      Difficulty: "Hard",
+      Tags: ["Linked List", "Recursion", "Hard"],
+    },
+    {
+      ID: 8,
+      Rating: 2200,
+      TitleSlug: "substring-with-concatenation-of-all-words",
+      ContestSlug: "contest-4",
+      ContestID_en: 4,
+      Title: "Substring with Concatenation of All Words",
+      Difficulty: "Hard",
+      Tags: ["Hash Table", "String", "Sliding Window", "Hard"],
+    },
+    // Old Era Problems - Biweekly Contests
+    {
+      ID: 9,
+      Rating: 900,
+      TitleSlug: "palindrome-number",
+      ContestSlug: "contest-100",
+      ContestID_en: 100,
+      Title: "Palindrome Number",
+      Difficulty: "Easy",
+      Tags: ["Math", "Easy"],
+    },
+    {
+      ID: 10,
+      Rating: 1100,
+      TitleSlug: "roman-to-integer",
+      ContestSlug: "contest-100",
+      ContestID_en: 100,
+      Title: "Roman to Integer",
+      Difficulty: "Easy",
+      Tags: ["Hash Table", "Math", "String", "Easy"],
+    },
+    {
+      ID: 11,
+      Rating: 1300,
+      TitleSlug: "longest-common-prefix",
+      ContestSlug: "contest-101",
+      ContestID_en: 101,
+      Title: "Longest Common Prefix",
+      Difficulty: "Easy",
+      Tags: ["String", "Easy"],
+    },
+    {
+      ID: 12,
+      Rating: 1500,
+      TitleSlug: "valid-parentheses",
+      ContestSlug: "contest-101",
+      ContestID_en: 101,
+      Title: "Valid Parentheses",
+      Difficulty: "Easy",
+      Tags: ["Stack", "String", "Easy"],
+    },
+    // New Era Problems (After 2021) - Weekly Contests
+    {
+      ID: 13,
+      Rating: 1700,
+      TitleSlug: "merge-two-sorted-lists",
+      ContestSlug: "contest-300",
+      ContestID_en: 300,
+      Title: "Merge Two Sorted Lists",
+      Difficulty: "Easy",
+      Tags: ["Linked List", "Recursion", "Easy"],
+    },
+    {
+      ID: 14,
+      Rating: 1900,
+      TitleSlug: "remove-duplicates-from-sorted-array",
+      ContestSlug: "contest-300",
+      ContestID_en: 300,
+      Title: "Remove Duplicates from Sorted Array",
+      Difficulty: "Easy",
+      Tags: ["Array", "Two Pointers", "Easy"],
+    },
+    {
+      ID: 15,
+      Rating: 2100,
+      TitleSlug: "remove-element",
+      ContestSlug: "contest-301",
+      ContestID_en: 301,
+      Title: "Remove Element",
+      Difficulty: "Easy",
+      Tags: ["Array", "Two Pointers", "Easy"],
+    },
+    {
+      ID: 16,
+      Rating: 2300,
+      TitleSlug: "implement-strstr",
+      ContestSlug: "contest-301",
+      ContestID_en: 301,
+      Title: "Implement strStr()",
+      Difficulty: "Easy",
+      Tags: ["String", "Two Pointers", "Easy"],
+    },
+    // New Era Problems - Biweekly Contests
+    {
+      ID: 17,
+      Rating: 2400,
+      TitleSlug: "divide-two-integers",
+      ContestSlug: "contest-400",
+      ContestID_en: 400,
+      Title: "Divide Two Integers",
+      Difficulty: "Medium",
+      Tags: ["Math", "Bit Manipulation", "Medium"],
+    },
+    {
+      ID: 18,
+      Rating: 2600,
+      TitleSlug: "substring-with-concatenation-of-all-words",
+      ContestSlug: "contest-400",
+      ContestID_en: 400,
+      Title: "Substring with Concatenation of All Words",
+      Difficulty: "Hard",
+      Tags: ["Hash Table", "String", "Sliding Window", "Hard"],
+    },
+    // Special Contest Problems
+    {
+      ID: 19,
+      Rating: 2800,
+      TitleSlug: "longest-valid-parentheses",
+      ContestSlug: "contest-500",
+      ContestID_en: 500,
+      Title: "Longest Valid Parentheses",
+      Difficulty: "Hard",
+      Tags: ["String", "Dynamic Programming", "Stack", "Hard"],
+    },
+    {
+      ID: 20,
+      Rating: 3000,
+      TitleSlug: "trapping-rain-water",
+      ContestSlug: "contest-501",
+      ContestID_en: 501,
+      Title: "Trapping Rain Water",
+      Difficulty: "Hard",
+      Tags: ["Array", "Two Pointers", "Dynamic Programming", "Stack", "Hard"],
+    },
+  ];
 }

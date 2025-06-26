@@ -253,7 +253,7 @@ export function ProblemFilters({
             </Select>
           )}
 
-          {/* Codeforces Contest Era Filter */}
+          {/* Contest Era Filter - Only for Codeforces */}
           {(filters.platform === "codeforces" ||
             filters.platform === "all") && (
             <Select
@@ -267,8 +267,8 @@ export function ProblemFilters({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Eras</SelectItem>
-                <SelectItem value="new">New (After 2022)</SelectItem>
-                <SelectItem value="old">Old (Before 2022)</SelectItem>
+                <SelectItem value="new">After 2022</SelectItem>
+                <SelectItem value="old">Before 2022</SelectItem>
               </SelectContent>
             </Select>
           )}
