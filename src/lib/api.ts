@@ -424,6 +424,15 @@ export async function fetchCodeforcesProblems(): Promise<{ problems: CodeforcesP
   try {
     console.log("Fetching Codeforces problems...");
 
+    // First, try to fetch real contest names
+    let contestMap = new Map<number, string>();
+    try {
+      contestMap = await fetchCodeforcesContests();
+      console.log(`Fetched ${contestMap.size} real contest names`);
+    } catch (error) {
+      console.warn("Failed to fetch real contest names, will use fallback:", error);
+    }
+
     // Use a single API call with timeout
     const response = await Promise.race([
       fetch("https://codeforces.com/api/problemset.problems", {
@@ -448,72 +457,74 @@ export async function fetchCodeforcesProblems(): Promise<{ problems: CodeforcesP
 
     // Process problems with contest names
     const problems: CodeforcesProblem[] = [];
-    const contestMap = new Map<number, string>();
 
-    // Create contest names based on contest ID patterns with division information
     data.result.problems.forEach((problem) => {
       if (problem.contestId && problem.index) {
-        // Generate contest name based on contest ID with division information
-        let contestName = "";
+        // Use real contest name if available, otherwise create a fallback
+        let contestName = contestMap.get(problem.contestId);
         
-        if (problem.contestId <= 100) {
-          contestName = "Codeforces Beta Round";
-        } else if (problem.contestId <= 200) {
-          contestName = "Codeforces Round";
-        } else if (problem.contestId <= 1000) {
-          contestName = "Codeforces Round";
-        } else if (problem.contestId <= 2000) {
-          contestName = "Codeforces Round";
-        } else {
-          contestName = "Codeforces Round";
-        }
+        if (!contestName) {
+          // Fallback contest name generation (only if real data is not available)
+          if (problem.contestId <= 100) {
+            contestName = "Codeforces Beta Round";
+          } else if (problem.contestId <= 200) {
+            contestName = "Codeforces Round";
+          } else if (problem.contestId <= 1000) {
+            contestName = "Codeforces Round";
+          } else if (problem.contestId <= 2000) {
+            contestName = "Codeforces Round";
+          } else {
+            contestName = "Codeforces Round";
+          }
 
-        // Add division information based on contest ID patterns
-        if (problem.contestId >= 2000) {
-          // 2024+ contests - more diverse division distribution
-          const mod = problem.contestId % 8;
-          if (mod <= 1) contestName += " (Div. 2)";
-          else if (mod <= 3) contestName += " (Div. 1)";
-          else if (mod <= 5) contestName += " (Div. 3)";
-          else if (mod === 6) contestName += " (Div. 4)";
-          else contestName += " (Educational)";
-        } else if (problem.contestId >= 1900) {
-          // 2023 contests
-          const mod = problem.contestId % 6;
-          if (mod <= 1) contestName += " (Div. 2)";
-          else if (mod <= 2) contestName += " (Div. 1)";
-          else if (mod <= 3) contestName += " (Educational)";
-          else if (mod === 4) contestName += " (Div. 3)";
-          else contestName += " (Div. 4)";
-        } else if (problem.contestId >= 1750) {
-          // 2022 contests
-          const mod = problem.contestId % 5;
-          if (mod <= 1) contestName += " (Div. 2)";
-          else if (mod === 2) contestName += " (Div. 1)";
-          else if (mod === 3) contestName += " (Educational)";
-          else contestName += " (Div. 3)";
-        } else if (problem.contestId >= 1600) {
-          // 2021 contests
-          const mod = problem.contestId % 4;
-          if (mod <= 1) contestName += " (Div. 2)";
-          else if (mod === 2) contestName += " (Div. 1)";
-          else if (mod === 3) contestName += " (Educational)";
-          else contestName += " (Div. 3)";
-        } else if (problem.contestId >= 1400) {
-          // 2019-2020 contests
-          if (problem.contestId % 3 === 0) contestName += " (Div. 2)";
-          else if (problem.contestId % 3 === 1) contestName += " (Div. 1)";
-          else contestName += " (Educational)";
-        } else if (problem.contestId >= 1000) {
-          // 2017-2018 contests
-          if (problem.contestId % 2 === 0) contestName += " (Div. 2)";
-          else contestName += " (Div. 1)";
-        } else {
-          // Very old contests
-          contestName += " (Other)";
+          // Add division information based on contest ID patterns (fallback only)
+          if (problem.contestId >= 2000) {
+            // 2024+ contests - more diverse division distribution
+            const mod = problem.contestId % 8;
+            if (mod <= 1) contestName += " (Div. 2)";
+            else if (mod <= 3) contestName += " (Div. 1)";
+            else if (mod <= 5) contestName += " (Div. 3)";
+            else if (mod === 6) contestName += " (Div. 4)";
+            else contestName += " (Educational)";
+          } else if (problem.contestId >= 1900) {
+            // 2023 contests
+            const mod = problem.contestId % 6;
+            if (mod <= 1) contestName += " (Div. 2)";
+            else if (mod <= 2) contestName += " (Div. 1)";
+            else if (mod <= 3) contestName += " (Educational)";
+            else if (mod === 4) contestName += " (Div. 3)";
+            else contestName += " (Div. 4)";
+          } else if (problem.contestId >= 1750) {
+            // 2022 contests
+            const mod = problem.contestId % 5;
+            if (mod <= 1) contestName += " (Div. 2)";
+            else if (mod === 2) contestName += " (Div. 1)";
+            else if (mod === 3) contestName += " (Educational)";
+            else contestName += " (Div. 3)";
+          } else if (problem.contestId >= 1600) {
+            // 2021 contests
+            const mod = problem.contestId % 4;
+            if (mod <= 1) contestName += " (Div. 2)";
+            else if (mod === 2) contestName += " (Div. 1)";
+            else if (mod === 3) contestName += " (Educational)";
+            else contestName += " (Div. 3)";
+          } else if (problem.contestId >= 1400) {
+            // 2019-2020 contests
+            if (problem.contestId % 3 === 0) contestName += " (Div. 2)";
+            else if (problem.contestId % 3 === 1) contestName += " (Div. 1)";
+            else contestName += " (Educational)";
+          } else if (problem.contestId >= 1000) {
+            // 2017-2018 contests
+            if (problem.contestId % 2 === 0) contestName += " (Div. 2)";
+            else contestName += " (Div. 1)";
+          } else {
+            // Very old contests
+            contestName += " (Other)";
+          }
+          
+          // Store the fallback name
+          contestMap.set(problem.contestId, contestName);
         }
-
-        contestMap.set(problem.contestId, contestName);
 
         // Add rating-based tags
         const tags = [...problem.tags];
@@ -666,8 +677,12 @@ export function convertCodeforcesProblem(
     contestId: cfProblem.contestId,
     index: cfProblem.index,
     encodedIndex: encodedIndex,
-    url: url
+    url: url,
+    contestName: fullContestName
   });
+
+  // Use real contest name for type detection if available, otherwise fallback
+  const contestType = contestName ? detectContestTypeFromName(contestName) : determineContestType(cfProblem.contestId);
 
   return {
     id: `codeforces-${cfProblem.contestId}${cfProblem.index}`,
@@ -680,7 +695,7 @@ export function convertCodeforcesProblem(
     solvedCount: cfProblem.solvedCount,
     contestId: cfProblem.contestId,
     contestName: fullContestName,
-    contestType: detectContestTypeFromName(fullContestName), // 'div2', 'educational', etc.
+    contestType: contestType, // Use more accurate detection
     problemType: cfProblem.index.charAt(0),
     contestEra: determineContestEra(cfProblem.contestId),
   };

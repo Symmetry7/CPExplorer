@@ -52,46 +52,72 @@ async function fetchContests(): Promise<CodeforcesContest[]> {
 export function detectContestTypeFromName(contestName: string): string {
   const name = contestName.toLowerCase();
 
+  // Check for division patterns with various formats
   if (
     name.includes("div. 1") ||
     name.includes("div 1") ||
-    name.includes("division 1")
+    name.includes("division 1") ||
+    name.includes("div1") ||
+    name.includes("(div. 1)") ||
+    name.includes("(div 1)")
   ) {
     return "div1";
   }
   if (
     name.includes("div. 2") ||
     name.includes("div 2") ||
-    name.includes("division 2")
+    name.includes("division 2") ||
+    name.includes("div2") ||
+    name.includes("(div. 2)") ||
+    name.includes("(div 2)")
   ) {
     return "div2";
   }
   if (
     name.includes("div. 3") ||
     name.includes("div 3") ||
-    name.includes("division 3")
+    name.includes("division 3") ||
+    name.includes("div3") ||
+    name.includes("(div. 3)") ||
+    name.includes("(div 3)")
   ) {
     return "div3";
   }
   if (
     name.includes("div. 4") ||
     name.includes("div 4") ||
-    name.includes("division 4")
+    name.includes("division 4") ||
+    name.includes("div4") ||
+    name.includes("(div. 4)") ||
+    name.includes("(div 4)")
   ) {
     return "div4";
   }
-  if (name.includes("educational")) {
+  if (
+    name.includes("educational") ||
+    name.includes("edu") ||
+    name.includes("(educational)")
+  ) {
     return "educational";
   }
-  if (name.includes("global")) {
+  if (
+    name.includes("global") ||
+    name.includes("round") && name.includes("global")
+  ) {
     return "global";
   }
   if (
     name.includes("good bye") ||
     name.includes("hello") ||
-    name.includes("april fools")
+    name.includes("april fools") ||
+    name.includes("april fool")
   ) {
     return "special";
+  }
+
+  // Check for beta rounds and very old contests
+  if (name.includes("beta round")) {
+    return "other";
   }
 
   return "other";
